@@ -1,0 +1,38 @@
+name: Importar base v0.12.0 de Ludo de Gongonia
+on:
+  push:
+    paths:
+      - ".github/workflows/importar-v012.yml"
+permissions:
+  contents: write
+jobs:
+  importacion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preparar repositorio nuevo
+        uses: actions/checkout@v4
+      - name: Obtener copia exacta de la versión de referencia
+        run: |
+          git clone --branch v0-11-4-dado-marfil-vertical --depth 1 --single-branch https://github.com/gongoniaworks/Ludo-Gongonia-Seguridad.git "${RUNNER_TEMP}/ludo-base"
+          actual=$(git -C "${RUNNER_TEMP}/ludo-base" rev-parse HEAD)
+          expected="e33b68b7cb28ed92ce8d87757ec0665401d7be0e"
+          test "$actual" = "$expected" || { echo "La fuente ha cambiado; se cancela la importación"; exit 1; }
+      - name: Incorporar todos los archivos originales sin modificar código ni recursos
+        run: |
+          rsync -a --exclude="/.git/" --exclude="/README.md" "${RUNNER_TEMP}/ludo-base/" ./
+          test -s index.html
+          test -s tablero-gongonia.PNG
+          test -s "The Kelta Mountains.mp3"
+          test -s "The Routa Plains of Ánganor (Take 2).mp3"
+          find "${RUNNER_TEMP}/ludo-base" -type f ! -path "*/.git/*" ! -name README.md | while IFS= read -r sourcefile; do
+            relative="${sourcefile#${RUNNER_TEMP}/ludo-base/}"
+            cmp "$sourcefile" "./$relative" || exit 1
+          done
+      - name: Registrar v0.12.0 como base de desarrollo lineal
+        run: |
+          rm -f .github/workflows/importar-v012.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "v0.12.0: importar base sin alterar juego v0.11.4"
+          git push origin HEAD:main
