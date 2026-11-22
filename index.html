@@ -1,0 +1,3089 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#171b2a"><title>LUDO · Los Juegos de Gongonia · v0.11.0</title>
+<style>
+:root{--gold:#d8b76d;--ink:#f8f0dd;--red:#c44b50;--green:#32815c;--yellow:#e0b83c;--blue:#427cbd}
+*{box-sizing:border-box}html{min-height:100%;background:#071a33}body{margin:0;background:#071a33;color:var(--ink);font-family:system-ui,-apple-system,sans-serif}.app{max-width:900px;margin:auto;padding:16px 10px 30px}h1{text-align:center;font:clamp(2rem,6vw,3.2rem) Georgia,serif;margin:8px 0}.sub{text-align:center;color:#d4c7a9}.panel{background:#252d42;border:1px solid #d8b76d66;border-radius:14px;padding:14px;margin-bottom:12px}.choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.choice{padding:10px;border:1px solid #ffffff30;border-radius:9px;display:flex;flex-direction:column;gap:9px;min-width:0}.choice label{display:flex;align-items:center;gap:6px;font-size:.9rem}.choice input[type="checkbox"]{accent-color:var(--gold);flex:none}.choice .player-name{width:100%;min-width:0;padding:8px;border:1px solid #ffffff30;border-radius:7px;background:#171b2a;color:var(--ink);font:inherit;font-size:.85rem}.choice .player-name::placeholder{color:#aaa99f}button{font:inherit;cursor:pointer;touch-action:manipulation}.primary,.secondary{border:0;border-radius:9px;padding:11px 14px;font-weight:800;min-height:44px}.primary{background:linear-gradient(#f3d994,#c49b4b);color:#241b0d}.secondary{background:#ffffff15;color:var(--ink);border:1px solid #ffffff25}.primary:disabled{opacity:.4}.hidden{display:none!important}.layout{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:12px}.board{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));aspect-ratio:1;border:3px solid #ae8c4c;border-radius:7px;overflow:hidden;background:#d8c8a7}.cell{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;border:1px solid #6e624d38;background:#eee4cd}.home-red{background:#e8b8b6}.home-green{background:#b9d9c4}.home-yellow{background:#f0df9c}.home-blue{background:#b9cee7}.path{background:#f5eddd}.safe{background:#f0d28a}.lane-red{background:var(--red)}.lane-green{background:var(--green)}.lane-yellow{background:var(--yellow)}.lane-blue{background:var(--blue)}.center{background:radial-gradient(circle,#ffe6a1,#a67d32);font-size:clamp(13px,3vw,25px);color:#513b15}.pieces{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:1px}.piece{width:88%;height:88%;max-width:30px;max-height:30px;padding:0;border-radius:50%;border:2px solid #fff0b5;background:var(--team);color:white;font-size:clamp(7px,1.6vw,14px);font-weight:900}.piece.yellow{color:#392906}.piece.legal{outline:3px solid #fff4a3;box-shadow:0 0 7px #fff4a3}.piece:disabled{cursor:default}.side{display:flex;flex-direction:column;gap:12px}.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:#c7bda8}.turn{font:1.3rem Georgia,serif;margin:5px 0}.dice{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:10px}.die{position:relative;width:52px;height:52px;display:block;aspect-ratio:1;background:transparent;border:0;border-radius:0;overflow:visible;flex:none}.die-art{display:block;width:100%;height:100%;object-fit:contain;overflow:visible;filter:drop-shadow(0 3px 4px #0006)}.die-result{position:absolute;right:-2px;bottom:-1px;display:grid;place-items:center;width:21px;height:21px;border:2px solid #f3d994;border-radius:50%;background:linear-gradient(#3b2b1b,#171b2a);color:#fff0bd;font-size:15px;font-weight:900;line-height:1;box-shadow:0 1px 4px #0008;text-shadow:0 1px 2px #000}
+/* El resultado se lee en los puntos del dado: quitamos el contador circular redundante. */
+.die-result{display:none!important}
+.status{line-height:1.45;min-height:55px;color:#e5dbc8;font-size:.88rem}.players{display:grid;gap:6px}.player{display:flex;align-items:center;gap:7px;padding:7px;border-radius:8px;background:#ffffff0b;font-size:.8rem}.player.current{outline:1px solid var(--gold)}.dot{width:10px;height:10px;border-radius:50%}.right{margin-left:auto;color:#c8bea9;font-size:.72rem}.note,.credits{text-align:center;color:#aaa99f;font-size:.76rem;line-height:1.5;margin-top:12px}@media(max-width:650px){.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}.side .wide{grid-column:1/-1}}@media(max-width:360px){.side{grid-template-columns:1fr}.side .wide{grid-column:auto}}
+
+/* Paso 3: mostrar el tablero ilustrado definitivo como fondo */
+.board{
+  background-image:url("tablero-gongonia.PNG");
+  background-size:100% 100%;
+  background-repeat:no-repeat;
+  background-position:center;
+  background-color:transparent;
+  border:0;
+  border-radius:0;
+}
+.cell,
+.home-red,.home-green,.home-yellow,.home-blue,
+.path,.safe,.lane-red,.lane-green,.lane-yellow,.lane-blue,.center{
+  background:transparent !important;
+  border-color:transparent !important;
+}
+.center{color:transparent !important}
+
+
+/* Paso 4: las casas se posicionan mediante coordenadas explícitas en JavaScript */
+.board{position:relative}
+.cell.home-red,.cell.home-green,.cell.home-yellow,.cell.home-blue{
+  position:absolute;width:10.2%;height:10.2%;padding:0;z-index:2;
+  display:flex;align-items:center;justify-content:center;overflow:visible;
+}
+.cell .pieces{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:1px}
+.cell .piece{width:42%;height:42%;max-width:28px;max-height:28px;min-width:12px;min-height:12px}
+
+/* v0.3.1: centros refinados y fichas agrupadas siempre circulares. */
+.board{display:block;position:relative;width:100%;aspect-ratio:1;overflow:hidden;background-color:#252d42;background-image:url("tablero-gongonia.PNG?v=0.10.6");background-size:100% 100%;background-repeat:no-repeat;background-position:center;border:0;border-radius:0}
+.board-art{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;object-fit:fill;pointer-events:none}
+.token-stack{position:absolute;transform:translate(-50%,-50%);z-index:5;width:6.2%;aspect-ratio:1 / 1;height:auto;min-width:26px;max-width:46px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));align-items:center;justify-items:center;gap:1px;pointer-events:none}
+.token-stack button{pointer-events:auto}
+.token-stack.single{display:flex;align-items:center;justify-content:center}
+.token-stack .piece{box-sizing:border-box;border-radius:50%;aspect-ratio:1 / 1;width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:none;flex:none;padding:0;line-height:1;display:flex;align-items:center;justify-content:center}
+.token-stack.single .piece{width:82%;height:82%;font-size:clamp(10px,1.7vw,14px)}
+.token-stack.multi .piece{width:100%;height:100%;border-width:1.5px;font-size:clamp(7px,1.25vw,11px)}
+.token-stack.count-3 .piece:last-child{grid-column:1 / span 2;width:48%;height:100%;justify-self:center}
+.token-stack.many{width:8%;max-width:54px}
+.token-stack.many .piece{width:100%;height:100%;font-size:clamp(6px,1vw,9px)}
+
+
+.stats-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.84rem}.stats-table th,.stats-table td{padding:9px 6px;border-bottom:1px solid #ffffff20;text-align:left;vertical-align:top}.stats-table th{color:#f4d99b}.stat-captures{line-height:1.55}.stat-chip{display:inline-block;border-radius:7px;padding:3px 6px;margin:2px 3px 2px 0;background:#ffffff12}.musicbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0;padding:10px;border:1px solid #d8b76d55;border-radius:10px;background:#171b2a88;font-size:.85rem}
+.musicbar span{color:#f4d99b}
+
+/* v0.5: animaciones suaves para el dado y las fichas */
+@keyframes diceRollEffect{
+  0%{transform:rotate(0deg) scale(1)}
+  20%{transform:rotate(95deg) scale(1.12) translateY(-3px)}
+  45%{transform:rotate(190deg) scale(.94) translateY(1px)}
+  70%{transform:rotate(285deg) scale(1.1) translateY(-2px)}
+  100%{transform:rotate(360deg) scale(1)}
+}
+.die.rolling{animation:diceRollEffect .65s ease-in-out}
+@keyframes tokenHopEffect{
+  0%{transform:translate(-50%,-62%) scale(1)}
+  45%{transform:translate(-50%,-78%) scale(1.12)}
+  100%{transform:translate(-50%,-62%) scale(1)}
+}
+.token-stack.hopping{animation:tokenHopEffect .16s ease-out}
+@media(prefers-reduced-motion:reduce){
+  .die.rolling,.token-stack.hopping{animation-duration:.01ms}
+}
+
+/* v0.5.4: breve efecto al regresar una ficha capturada a su base */
+@keyframes capturedReturnEffect{
+  0%{transform:translate(-50%,-62%) scale(1);filter:brightness(1)}
+  22%{transform:translate(-50%,-50%) scale(1.24) rotate(-8deg);filter:brightness(1.8)}
+  48%{transform:translate(-50%,-50%) scale(.72) rotate(7deg);filter:brightness(1.3)}
+  72%{transform:translate(-50%,-50%) scale(1.12);filter:brightness(1.5)}
+  100%{transform:translate(-50%,-62%) scale(1);filter:brightness(1)}
+}
+.token-stack.captured-return{animation:capturedReturnEffect .48s ease-out}
+@media(prefers-reduced-motion:reduce){.token-stack.captured-return{animation-duration:.01ms}}
+
+/* Captura: la ficha atacante salta, crece y cae sobre la ficha rival. */
+.token-stack .piece.stomping{position:absolute!important;left:50%;top:50%;width:72%!important;height:72%!important;transform:translate(-50%,-50%);z-index:20!important;overflow:visible!important}
+.token-stack .piece.stomping .guardian-token{z-index:20;animation:guardianStompEffect .76s cubic-bezier(.2,.75,.25,1) both;transform-origin:50% 85%}
+.token-stack .piece.stomped{z-index:1}
+.token-stack .piece.stomped .guardian-token{animation:guardianCrushedEffect .76s ease-in both;transform-origin:50% 90%}
+@keyframes guardianStompEffect{
+  0%{transform:translate(-50%,-62%) scale(1);filter:drop-shadow(0 1px 1px #0009)}
+  30%{transform:translate(-50%,-91%) scale(1.32);filter:drop-shadow(0 8px 5px #0008) brightness(1.12)}
+  55%{transform:translate(-50%,-48%) scale(1.48,.78);filter:drop-shadow(0 1px 2px #000b) brightness(1.5)}
+  72%{transform:translate(-50%,-54%) scale(1.22,.9);filter:drop-shadow(0 2px 2px #0009) brightness(1.2)}
+  100%{transform:translate(-50%,-62%) scale(1);filter:drop-shadow(0 1px 1px #0009)}
+}
+@keyframes guardianCrushedEffect{
+  0%,28%{transform:translate(-50%,-62%) scale(1);opacity:1;filter:brightness(1)}
+  55%{transform:translate(-50%,-45%) scale(.72,.38) rotate(-10deg);opacity:.72;filter:brightness(1.7)}
+  100%{transform:translate(-50%,-48%) scale(.58,.3) rotate(8deg);opacity:.42;filter:brightness(1.3)}
+}
+@media(prefers-reduced-motion:reduce){
+ .token-stack .piece.stomping .guardian-token,.token-stack .piece.stomped .guardian-token{animation-duration:.01ms}
+}
+
+/* Fuegos artificiales sobre la meta al llegar una ficha. */
+.goal-fireworks{position:absolute;z-index:25;width:0;height:0;pointer-events:none;overflow:visible}
+.firework-burst{position:absolute;left:var(--burst-x);top:var(--burst-y);width:0;height:0}
+.firework-spark{position:absolute;left:0;top:0;width:4px;height:10px;border-radius:50%;background:var(--spark-color);box-shadow:0 0 7px 2px var(--spark-color);transform:rotate(var(--angle)) translateY(0) scale(.25);opacity:0;animation:goalFireworkBurst .92s cubic-bezier(.12,.65,.2,1) var(--delay) forwards}
+.firework-core{position:absolute;left:0;top:0;width:11px;height:11px;border-radius:50%;background:#fff7d4;box-shadow:0 0 10px 5px #ffe8a0,0 0 23px 9px #e7ae48;transform:translate(-50%,-50%) scale(.2);animation:goalFireworkCore .42s ease-out var(--delay) both}
+@keyframes goalFireworkBurst{
+  0%{transform:rotate(var(--angle)) translateY(0) scale(.2);opacity:0}
+  14%{opacity:1}
+  100%{transform:rotate(var(--angle)) translateY(calc(0px - var(--distance))) scale(.55);opacity:0}
+}
+@keyframes goalFireworkCore{
+  0%{transform:translate(-50%,-50%) scale(.15);opacity:0}
+  30%{transform:translate(-50%,-50%) scale(1.25);opacity:1}
+  100%{transform:translate(-50%,-50%) scale(.2);opacity:0}
+}
+
+/* v0.7.3: guardianes ilustrados como fichas del juego */
+.token-stack .piece{position:relative;overflow:visible;border:0!important;background:transparent!important;color:transparent!important;outline:0;box-shadow:none;padding:0;}
+.token-stack .piece.legal{outline:0;box-shadow:none;}
+.guardian-token{display:block;position:absolute;left:50%;top:50%;width:148%;height:148%;max-width:none;max-height:none;object-fit:contain;transform:translate(-50%,-62%);pointer-events:none;filter:drop-shadow(0 1px 1px #0009);}
+.piece-number{position:absolute;right:-3px;bottom:-3px;z-index:3;width:12px;height:12px;border:1px solid #fff1c5;border-radius:50%;background:#252033;color:#fff;font-size:8px;font-weight:900;line-height:10px;text-align:center;pointer-events:none;}
+.token-stack .piece.legal .guardian-token{filter:drop-shadow(0 0 2px #fff4a3) drop-shadow(0 0 4px #e5be55);animation:guardianLegalGlow .8s ease-in-out infinite alternate;}
+@keyframes guardianLegalGlow{from{transform:translate(-50%,-62%) scale(1)}to{transform:translate(-50%,-62%) scale(1.06)}}
+@media(prefers-reduced-motion:reduce){.token-stack .piece.legal .guardian-token{animation:none}}
+.mode-label{justify-content:space-between;font-size:.78rem!important}.player-mode{width:auto;max-width:62%;min-width:0;padding:6px;border-radius:7px;background:#171b2a;color:var(--ink);border:1px solid #ffffff30;font:inherit}
+
+/* Arte exacto aprobado por el usuario. Los controles transparentes se alinean sobre la imagen original. */
+.home-image-shell{display:block;position:relative;width:100%;max-width:780px;aspect-ratio:2/3;margin:0 auto;overflow:hidden}
+.home-image-shell>img{display:block;width:100%;height:100%;object-fit:contain;object-position:center}
+.home-hotspot{position:absolute;z-index:3;display:block;min-width:0!important;min-height:0!important;padding:0!important;margin:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:transparent!important;touch-action:manipulation;cursor:pointer}
+.home-hotspot:focus-visible{outline:3px solid #fff0a2!important;outline-offset:1px;background:#ffffff12!important}
+.home-image-language-label{position:absolute;z-index:4;left:75.4%;top:2.0%;width:14.5%;height:3.4%;align-items:center;justify-content:center;text-align:center;overflow:hidden;border:1px solid #b78935;border-radius:2px;background:rgba(5,22,45,.97);color:#fff0cc;font:600 clamp(8px,1.7vw,16px) Georgia,serif;pointer-events:none}
+.home-image-language-label:not([hidden]){display:flex}
+.home-language-menu{position:absolute;z-index:8;left:70%;top:6.2%;width:27.5%;padding:4px;border:2px solid #d9a746;border-radius:5px;background:linear-gradient(135deg,#07152a,#102c4b 55%,#061329);box-shadow:0 5px 12px #000b,inset 0 0 0 1px #f7d57855}
+.home-language-menu[hidden]{display:none!important}
+.home-language-option{display:flex;align-items:center;gap:6px;width:100%;min-height:31px;padding:4px 5px;border:0;border-bottom:1px solid #c59a4a55;border-radius:0;background:transparent;color:#fff0cf;text-align:left;font:clamp(8px,1.5vw,15px) Georgia,serif}
+.home-language-option:last-child{border-bottom:0}
+.home-language-option:active,.home-language-option:focus-visible{background:#d4a64b44;outline:1px solid #f7d578}
+@media(max-width:420px){.home-image-language-label{font-size:clamp(8px,2.1vw,11px)}.home-language-option{min-height:25px;gap:3px;padding:3px;font-size:clamp(8px,2vw,11px)}}
+
+
+/* Pantalla de historia: pergamino azul noche y oro, adaptada a lectura móvil. */
+.story-screen{width:min(100%,900px);min-height:calc(100dvh - 16px);margin:0 auto 18px;overflow:hidden;border:2px solid #b88938;border-radius:12px;background:linear-gradient(180deg,#07162a,#101c2c 42%,#16131a);color:#f8ecd1;box-shadow:0 8px 28px #0009}
+.story-screen.hidden{display:none!important}
+.story-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px clamp(12px,3vw,24px);background:linear-gradient(90deg,#061329,#10345a,#061329);border-bottom:1px solid #c39843}
+.story-back{display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:7px 13px;border:1px solid #d4a74c;border-radius:6px;color:#ffe7a1;background:linear-gradient(180deg,#102f50,#07162b);font:600 .9rem Georgia,serif}
+.story-back span{font-size:25px;line-height:.8;color:#f6d072}
+.story-brand{color:#d6b368;font:700 .7rem Georgia,serif;letter-spacing:.17em;text-align:right}
+.story-cover{position:relative;isolation:isolate;overflow:hidden;min-height:190px;aspect-ratio:3/1;background:linear-gradient(135deg,#142a3a,#7d623a,#0d263c)}
+.story-cover img{position:absolute;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 56%}
+.story-cover-shade{position:absolute;z-index:-1;inset:0;background:linear-gradient(90deg,#04101aa8,#04101a40 45%,#04101a88),linear-gradient(0deg,#05111bf0,transparent 80%)}
+.story-cover-title{position:absolute;left:clamp(16px,5vw,52px);right:clamp(16px,5vw,52px);bottom:clamp(14px,3vw,28px);text-align:left;text-shadow:0 2px 8px #000}
+.story-cover-title>span{color:#f1d18a;font:700 clamp(.65rem,1.9vw,.85rem) Georgia,serif;letter-spacing:.17em}
+.story-cover-title h1{max-width:720px;margin:6px 0 4px;text-align:left;color:#ffdf8e;font:700 clamp(1.8rem,5.5vw,3.25rem)/1.05 Georgia,serif}
+.story-gold-rule{color:#e4bc64;letter-spacing:.25em}
+.story-article{max-width:780px;margin:0 auto;padding:clamp(19px,4vw,42px) clamp(18px,5vw,48px) 28px;font:1.04rem/1.78 Georgia,'Times New Roman',serif;color:#eee2c9}
+.story-article p{margin:0 0 1.05em}
+.story-article .story-opening:first-letter{float:left;padding:.02em .13em 0 0;color:#e8bc62;font:700 3.1em/.8 Georgia,serif}
+.story-quote{margin:1.6em 0;padding:12px 0 12px 18px;border-left:3px solid #c99b44;color:#ffdf96;font:italic 1.12rem/1.65 Georgia,serif}
+.story-ending{margin-top:1.35em!important;text-align:center;color:#ffda78;font:700 1.35rem/1.5 Georgia,serif}
+.story-bottom{display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 18px 20px}
+.story-back-bottom{justify-content:center;min-width:180px;min-height:46px;background:linear-gradient(#ffe59a,#bd8228);color:#291908;border:2px solid #f6d279;box-shadow:inset 0 0 0 1px #fff4ba}
+.story-footer{color:#c8b78f;font:.8rem Georgia,serif}
+#storyArtwork[hidden]{display:none}
+@media(max-width:520px){
+ .story-screen{border-radius:8px;margin-bottom:10px}
+ .story-topbar{padding:9px 10px}
+ .story-back{min-height:39px;padding:6px 9px;font-size:.82rem}
+ .story-brand{font-size:.58rem;letter-spacing:.1em}
+ .story-cover{min-height:190px;aspect-ratio:1.25/1}
+ .story-cover img{object-position:58% center}
+ .story-cover-title h1{font-size:clamp(1.75rem,8vw,2.5rem)}
+ .story-article{font-size:1rem;line-height:1.75;padding:22px 18px 20px}
+ .story-article .story-opening:first-letter{font-size:2.8em}
+}
+
+
+/* Pantalla principal única: se utiliza siempre el arte aprobado, sin menú alternativo ni cambio al cargar. */
+.home-screen{max-width:780px;padding:0;margin:0 auto 16px;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
+.home-screen:before,.home-screen:after{display:none}
+.home-image-shell{display:block}
+
+
+/* v0.10.2 — El Consejo de los Cuatro Reinos: arte original con controles interactivos */
+#setup.setup-screen{
+  position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+  width:100vw;height:100vh;height:100dvh;margin:0;padding:0;border:0;border-radius:0;
+  overflow:hidden;background:#100d14;
+}
+#setup .setup-artboard{
+  position:relative;flex:none;width:min(100vw,150vh);width:min(100vw,150dvh);
+  aspect-ratio:3/2;max-height:100vh;max-height:100dvh;container-type:inline-size;
+  overflow:hidden;isolation:isolate;
+}
+#setup .setup-background{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:fill;user-select:none;-webkit-user-drag:none}
+#setup .setup-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+#setup .setup-native-player{display:contents!important}
+#setup .realm-check,#setup .player-mode{display:none!important}
+#setup .player-name{
+  position:absolute;z-index:4;top:67.55%;height:3.75%;padding:0 1.1cqw!important;
+  border:1px solid transparent!important;border-radius:.45cqw!important;
+  outline:0;background:rgba(5,15,30,.97)!important;color:#fff4dd!important;
+  -webkit-text-fill-color:#fff4dd;text-shadow:none!important;-webkit-text-stroke:0 transparent;
+  font:clamp(8px,1.02cqw,16px) Georgia,serif!important;box-shadow:none!important;
+  min-width:0;text-align:left;opacity:1;
+}
+#setup .player-name:focus{border-color:#f7d47c!important;box-shadow:0 0 0 .18cqw #e9b95088,0 0 .7cqw #f4c65f88!important;background:#071020!important}
+#setup .player-name[data-team="red"]{left:13.65%;width:14.8%}
+#setup .player-name[data-team="blue"]{left:38.45%;width:14.9%}
+#setup .player-name[data-team="green"]{left:59.8%;width:12.1%}
+#setup .player-name[data-team="yellow"]{left:81.35%;width:12.1%}
+#setup .realm-hit{
+  position:absolute;z-index:3;top:17.7%;height:42.3%;display:block;cursor:pointer;
+  border:2px solid transparent;border-radius:1.2cqw;background:transparent;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+#setup .realm-hit.selected{
+  border-color:#ffe29a;box-shadow:inset 0 0 1.4cqw #ffd56d50,0 0 1.25cqw #ffd36dba;
+}
+#setup .realm-gongonia{left:9.7%;width:19.2%}
+#setup .realm-kelta{left:31.5%;width:17.8%}
+#setup .realm-brunia{left:53.1%;width:17.8%}
+#setup .realm-routa{left:72%;width:18.5%}
+#setup .setup-mode-group{
+  position:absolute;z-index:5;top:72.9%;height:13.4%;display:grid;
+  grid-template-rows:repeat(3,minmax(0,1fr));row-gap:.15cqw;
+}
+#setup .setup-mode-group[data-team="red"]{left:9.65%;width:11.7%}
+#setup .setup-mode-group[data-team="blue"]{left:34.8%;width:12.7%}
+#setup .setup-mode-group[data-team="green"]{left:56.4%;width:12.7%}
+#setup .setup-mode-group[data-team="yellow"]{left:77.6%;width:12.8%}
+#setup .setup-mode-group.inactive{opacity:.32;pointer-events:none}
+#setup .setup-mode-hit{position:relative;display:block;min-height:0;cursor:pointer}
+#setup .setup-mode-hit input{
+  appearance:none;-webkit-appearance:none;position:absolute;inset:0;
+  width:100%;height:100%;margin:0;transform:none;opacity:0;
+  border:0;border-radius:0;background:transparent;box-shadow:none;cursor:pointer;
+}
+#setup .setup-mode-hit input:checked:after{display:none}
+#setup .setup-mode-hit.selected:after{
+  content:"";position:absolute;left:12%;right:0;top:7%;bottom:7%;
+  border:1px solid #f3c968;border-radius:999px;
+  box-shadow:0 0 .7cqw #f4c35b9c,inset 0 0 .45cqw #f4c35b35;
+  pointer-events:none;
+}
+#setup .setup-back,#setup .setup-start{
+  position:absolute;z-index:8;display:block;min-width:0!important;min-height:0!important;
+  padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;cursor:pointer;touch-action:manipulation;
+}
+#setup .setup-back{left:.55%;top:2.15%;width:11.2%;height:6.1%;font-size:0;color:transparent}
+#setup .setup-start{left:32.6%;top:87.1%;width:34.5%;height:9.5%;font-size:0;color:transparent}
+#setup .setup-back:focus-visible,#setup .setup-start:focus-visible{
+  outline:3px solid #fff0a2!important;outline-offset:2px;background:#ffffff16!important;
+}
+#setup .setup-start:disabled{cursor:not-allowed;pointer-events:none;opacity:.38}
+#setup .setup-audio{
+  position:absolute;z-index:9;right:1.1%;top:1.8%;display:flex;gap:.55cqw;align-items:center;
+}
+#setup .setup-audio-button{
+  min-height:0!important;padding:.48cqw .72cqw!important;border:1px solid #d9b461!important;
+  border-radius:999px!important;background:#08152be8!important;color:#fff0c9!important;
+  font:600 clamp(7px,.72cqw,11px) Georgia,serif!important;line-height:1.2;white-space:nowrap;
+  box-shadow:0 1px .45cqw #000a,inset 0 0 0 1px #fff2;
+}
+#setup .setup-audio-button:active{transform:scale(.97)}
+#setup .music-status{display:none;color:#ffe39a;font:11px system-ui,sans-serif;text-align:center}
+#setup .music-status:not(:empty){display:block}
+
+/* En vertical, el arte se convierte en cabecera y los controles pasan a tarjetas legibles. */
+@media (orientation:portrait) and (max-width:900px){
+  #setup.setup-screen{display:block;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0;background:#100d14}
+  #setup .setup-artboard{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start;
+    width:100%;max-height:none;min-height:100dvh;height:auto;aspect-ratio:auto;
+    padding:0 12px 24px;overflow:visible;container-type:normal;
+  }
+  #setup .setup-background{
+    position:relative;grid-column:1/-1;width:calc(100% + 24px);height:auto;aspect-ratio:2/1;
+    margin:0 -12px;object-fit:cover;object-position:top center;
+  }
+  #setup .setup-back{
+    left:2%;top:1%;width:15%;height:5%;min-height:30px!important;
+    border:1px solid #d9b461!important;border-radius:999px!important;
+    background:#08152be8!important;color:#fff0c9!important;font:600 12px Georgia,serif!important;
+    padding:4px 8px!important;box-shadow:0 1px 5px #000a!important;
+  }
+  #setup .setup-audio{
+    position:relative;grid-column:1/-1;right:auto;top:auto;justify-content:center;flex-wrap:wrap;
+    padding:8px;background:#17121b;border:1px solid #d9b46166;border-radius:10px;
+  }
+  #setup .setup-audio-button{font:600 12px Georgia,serif!important;min-height:36px!important;padding:8px 12px!important}
+  #setup .music-status{flex-basis:100%}
+  #setup .setup-native-player{
+    position:relative;display:grid!important;grid-template-columns:24px minmax(0,1fr);
+    grid-template-rows:auto auto auto;align-items:center;gap:8px;
+    min-width:0;padding:12px;background:linear-gradient(145deg,#171b2a,#090e18);
+    border:1px solid #d8b76d99;border-radius:12px;
+  }
+  #setup .realm-check{
+    display:block!important;position:relative;grid-column:1;grid-row:1;
+    width:20px;height:20px;margin:0;accent-color:#e8bd62;
+  }
+  #setup .setup-team-name{
+    display:block!important;position:relative!important;grid-column:2;grid-row:1;
+    width:auto!important;height:auto!important;margin:0!important;padding:0!important;
+    overflow:visible!important;clip:auto!important;white-space:normal!important;
+    color:#f5d58e;font:600 15px Georgia,serif;text-align:left;
+  }
+  #setup .player-name{
+    position:relative!important;grid-column:1/-1;grid-row:2;top:auto!important;left:auto!important;
+    width:100%!important;height:40px;padding:0 10px!important;
+    border:1px solid #b98d45!important;border-radius:7px!important;
+    background:#071020!important;color:#fff4dd!important;-webkit-text-fill-color:#fff4dd;
+    font:15px Georgia,serif!important;text-shadow:none!important;box-shadow:none!important;
+  }
+  #setup .player-mode{
+    display:block!important;position:relative;grid-column:1/-1;grid-row:3;
+    width:100%;min-height:40px;padding:7px 10px;border:1px solid #b98d45;
+    border-radius:7px;background:#101b2d;color:#fff0c9;font:14px Georgia,serif;
+  }
+  #setup .realm-hit,#setup .setup-mode-group{display:none!important}
+  #setup #count{
+    display:block!important;position:relative!important;grid-column:1/-1;
+    width:auto!important;height:auto!important;margin:2px 0!important;padding:4px!important;
+    overflow:visible!important;clip:auto!important;white-space:normal!important;
+    color:#f4d99b;text-align:center;font:13px system-ui,sans-serif;
+  }
+  #setup .setup-start{
+    position:relative;grid-column:1/-1;left:auto;top:auto;width:100%;height:52px;
+    border:1px solid #e7c36f!important;border-radius:999px!important;
+    background:linear-gradient(#153e70,#061a35)!important;color:#fff0bd!important;
+    font:700 17px Georgia,serif!important;letter-spacing:.04em;
+    box-shadow:0 3px 12px #0009,inset 0 0 0 2px #fff2!important;
+  }
+  #setup .setup-start:disabled{opacity:.4}
+}
+@media (orientation:portrait) and (max-width:600px){
+  #setup .setup-artboard{grid-template-columns:minmax(0,1fr);gap:9px;padding:0 10px 22px}
+  #setup .setup-background{width:calc(100% + 20px);margin:0 -10px}
+  #setup .setup-native-player{padding:10px}
+}
+@media (orientation:landscape) and (max-height:500px){
+  #setup .player-name{font-size:clamp(10px,1.25cqw,15px)!important}
+  #setup .setup-mode-hit input{min-width:12px;min-height:12px}
+}
+
+
+/* v0.10.3 — Paneles interactivos del Consejo, inspirados en el boceto aprobado. */
+#setup .setup-player-panel{
+  position:absolute;z-index:2;top:59.5%;height:26.4%;
+  border:1px solid #d7ad59;border-radius:1.05cqw;
+  background:linear-gradient(155deg,rgba(6,13,24,.97),rgba(12,21,34,.97) 60%,rgba(5,12,22,.98));
+  box-shadow:0 .35cqw .9cqw #000b,inset 0 0 0 .18cqw #f4d17a22;
+  overflow:hidden;pointer-events:none;
+}
+#setup .setup-player-panel:after{
+  content:"";position:absolute;inset:.42cqw;border:1px solid #c69a4b66;
+  border-radius:.7cqw;pointer-events:none;
+}
+#setup .setup-player-panel[data-team="red"]{left:5%;width:21%}
+#setup .setup-player-panel[data-team="blue"]{left:28%;width:21%}
+#setup .setup-player-panel[data-team="green"]{left:51%;width:21%}
+#setup .setup-player-panel[data-team="yellow"]{left:74%;width:21%}
+#setup .setup-panel-title{
+  position:absolute;top:5.5%;left:0;width:100%;text-align:center;
+  color:#f8dfa1;font:700 clamp(9px,1.12cqw,16px) Georgia,serif;
+  letter-spacing:.045em;text-shadow:0 1px 3px #000;
+}
+#setup .setup-panel-realm{
+  position:absolute;top:21%;left:0;width:100%;text-align:center;
+  color:#d5b66f;font:600 clamp(7px,.72cqw,10px) Georgia,serif;
+  letter-spacing:.16em;text-shadow:0 1px 3px #000;
+}
+#setup .player-name{
+  top:65.6%;height:3.55%;padding:0 .8cqw!important;
+  border:1px solid #b68a45!important;border-radius:.5cqw!important;
+  background:rgba(5,14,29,.98)!important;
+  font:clamp(8px,.92cqw,13px) Georgia,serif!important;
+}
+#setup .player-name::placeholder{color:#c8c0b0;opacity:1}
+#setup .player-name[data-team="red"]{left:7%;width:17%}
+#setup .player-name[data-team="blue"]{left:30%;width:17%}
+#setup .player-name[data-team="green"]{left:53%;width:17%}
+#setup .player-name[data-team="yellow"]{left:76%;width:17%}
+#setup .setup-mode-group{
+  top:70.3%;height:14.9%;grid-template-rows:repeat(4,minmax(0,1fr));
+  row-gap:.2cqw;
+}
+#setup .setup-mode-group[data-team="red"]{left:6%;width:19%}
+#setup .setup-mode-group[data-team="blue"]{left:29%;width:19%}
+#setup .setup-mode-group[data-team="green"]{left:52%;width:19%}
+#setup .setup-mode-group[data-team="yellow"]{left:75%;width:19%}
+#setup .setup-mode-group.inactive{opacity:.66;pointer-events:auto}
+#setup .setup-mode-hit{
+  display:flex;align-items:center;justify-content:flex-start;gap:.55cqw;
+  min-width:0;padding:0 .8cqw;border:1px solid #42516a;
+  border-radius:999px;background:linear-gradient(180deg,#18304a,#0b1b30);
+  box-shadow:0 1px .25cqw #0008;color:#f4ead2;
+  font:600 clamp(8px,.88cqw,12px) Georgia,serif;line-height:1;overflow:hidden;
+}
+#setup .setup-mode-hit.selected{
+  border-color:#f4cd70;background:linear-gradient(180deg,#765324,#39240e);
+  box-shadow:0 0 .55cqw #edbd55a0,inset 0 0 .3cqw #ffe6a044;
+}
+#setup .setup-mode-hit .mode-icon{
+  flex:none;width:1.35cqw;text-align:center;color:#f4c66a;
+  font:700 clamp(9px,1.05cqw,15px)/1 system-ui,sans-serif;
+}
+#setup .setup-mode-hit .mode-text{
+  min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+@media (orientation:portrait) and (max-width:900px){
+  #setup .setup-player-panel{display:none!important}
+  #setup .setup-native-player.inactive{opacity:.68}
+  #setup .player-mode option{background:#101b2d;color:#fff0c9}
+}
+
+
+/* v0.10.4 — Una sola interfaz: arte recortado arriba y tarjetas funcionales debajo. */
+#setup.setup-screen{
+  position:fixed;inset:0;z-index:1000;display:block;
+  width:100%;height:100dvh;margin:0;padding:0;
+  overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:#100d14;
+}
+#setup .setup-artboard{
+  position:relative;display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-auto-rows:auto;align-content:start;align-items:stretch;
+  gap:12px;width:min(100%,1600px);height:auto;min-height:100dvh;
+  max-height:none;margin:0 auto;padding:0 16px 24px;
+  aspect-ratio:auto;overflow:visible;container-type:inline-size;
+}
+#setup .setup-background{
+  position:relative;inset:auto;grid-column:1/-1;
+  display:block;width:calc(100% + 32px);
+  height:calc((min(100vw,1600px) + 32px)/2.55);
+  max-height:none;margin:0 -16px;
+  object-fit:cover;object-position:center top;
+}
+#setup .setup-player-panel,#setup .realm-hit{display:none!important}
+#setup .setup-back{
+  position:absolute!important;left:8px!important;top:8px!important;
+  width:clamp(78px,14vw,112px)!important;height:clamp(38px,7vw,54px)!important;
+  min-width:0!important;min-height:0!important;padding:0!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;color:transparent!important;font-size:0!important;
+  z-index:12;
+}
+#setup .setup-back:focus-visible{outline:3px solid #fff0a2!important;outline-offset:2px}
+#setup .setup-audio{
+  position:relative!important;top:auto!important;right:auto!important;
+  grid-column:1/-1;display:flex;justify-content:center;align-items:center;
+  flex-wrap:wrap;gap:8px;margin:0;padding:10px;
+  border:1px solid #d9b46166;border-radius:12px;background:#17121b;
+}
+#setup .setup-audio-button{
+  min-height:42px!important;padding:8px 14px!important;
+  font:600 14px Georgia,serif!important;
+}
+#setup .music-status{flex-basis:100%;text-align:center}
+#setup .setup-native-player{
+  position:relative!important;display:grid!important;
+  grid-column:auto;grid-template-columns:24px minmax(0,1fr);
+  grid-template-rows:auto auto auto;align-items:center;gap:9px;
+  min-width:0;min-height:0;padding:12px;
+  border:1px solid #d8b76d99;border-radius:12px;
+  background:linear-gradient(145deg,#171b2a,#090e18);
+  box-shadow:0 3px 10px #0005;
+}
+#setup .realm-check{
+  display:block!important;position:static!important;
+  grid-column:1;grid-row:1;width:20px;height:20px;
+  margin:0;accent-color:#e8bd62;
+}
+#setup .setup-team-name{
+  display:block!important;position:static!important;
+  grid-column:2;grid-row:1;width:auto!important;height:auto!important;
+  margin:0!important;padding:0!important;overflow:visible!important;
+  clip:auto!important;clip-path:none!important;white-space:normal!important;
+  color:#f5d58e;font:700 clamp(15px,1.55cqw,22px) Georgia,serif;
+  text-align:left;
+}
+#setup .player-name{
+  display:block!important;position:relative!important;
+  grid-column:1/-1!important;grid-row:2!important;
+  top:auto!important;left:auto!important;width:100%!important;height:42px!important;
+  min-width:0;padding:0 10px!important;
+  border:1px solid #b98d45!important;border-radius:7px!important;
+  background:#071020!important;color:#fff4dd!important;
+  -webkit-text-fill-color:#fff4dd;font:15px Georgia,serif!important;
+  text-shadow:none!important;box-shadow:none!important;
+}
+#setup .player-name::placeholder{color:#c8c0b0;opacity:1}
+#setup .player-mode{display:none!important}
+#setup .setup-mode-group{
+  position:relative!important;top:auto!important;left:auto!important;
+  grid-column:1/-1!important;grid-row:3!important;
+  display:grid!important;width:100%!important;height:auto!important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:repeat(2,minmax(40px,auto));gap:7px!important;
+  z-index:1;
+}
+#setup .setup-mode-group.inactive{opacity:1!important;pointer-events:auto!important}
+#setup .setup-mode-hit{
+  position:relative!important;display:flex!important;
+  align-items:center;justify-content:flex-start;gap:7px;
+  min-width:0;min-height:40px;padding:6px 8px;
+  border:1px solid #42516a;border-radius:999px;
+  background:linear-gradient(180deg,#18304a,#0b1b30);
+  box-shadow:0 1px 4px #0008;color:#f4ead2;
+  font:600 clamp(11px,1.05cqw,14px) Georgia,serif;line-height:1.1;overflow:hidden;
+}
+#setup .setup-mode-hit.selected{
+  border-color:#f4cd70;background:linear-gradient(180deg,#765324,#39240e);
+  box-shadow:0 0 7px #edbd5599,inset 0 0 5px #ffe6a044;
+}
+#setup .setup-mode-hit input{
+  appearance:none;-webkit-appearance:none;position:absolute;inset:0;
+  width:100%;height:100%;margin:0;opacity:0;cursor:pointer;
+}
+#setup .setup-mode-hit .mode-icon{
+  flex:none;width:20px;text-align:center;color:#f4c66a;
+  font:700 14px/1 system-ui,sans-serif;
+}
+#setup .setup-mode-hit .mode-text{
+  min-width:0;white-space:normal;overflow:hidden;text-overflow:ellipsis;
+}
+#setup #count{
+  position:relative!important;display:block!important;
+  grid-column:1/-1!important;width:auto!important;height:auto!important;
+  margin:2px 0 0!important;padding:2px!important;
+  overflow:visible!important;clip:auto!important;white-space:normal!important;
+  color:#f4d99b;text-align:center;font:13px system-ui,sans-serif;
+}
+#setup .setup-start{
+  position:relative!important;display:block!important;
+  grid-column:1/-1!important;justify-self:center!important;
+  left:auto!important;top:auto!important;width:min(440px,96%)!important;
+  height:56px!important;min-height:56px!important;margin:4px 0 0!important;
+  padding:8px 20px!important;border:2px solid #e7c36f!important;
+  border-radius:999px!important;background:linear-gradient(#153e70,#061a35)!important;
+  color:#fff0bd!important;font:700 18px Georgia,serif!important;
+  letter-spacing:.04em;box-shadow:0 3px 12px #0009,inset 0 0 0 2px #fff2!important;
+}
+#setup .setup-start:disabled{opacity:.4}
+@media (max-width:900px){
+  #setup .setup-artboard{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0 12px 22px}
+  #setup .setup-background{
+    width:calc(100% + 24px);height:calc((min(100vw,900px) + 24px)/2.55);
+    margin:0 -12px;
+  }
+  #setup .setup-audio{grid-column:1/-1}
+  #setup .setup-native-player{padding:11px}
+}
+@media (max-width:600px){
+  #setup .setup-artboard{grid-template-columns:minmax(0,1fr);gap:9px;padding:0 10px 20px}
+  #setup .setup-background{
+    width:calc(100% + 20px);height:calc((100vw + 20px)/2.55);
+    margin:0 -10px;
+  }
+  #setup .setup-native-player{padding:10px}
+  #setup .setup-mode-hit{min-height:42px}
+}
+
+
+/* v0.10.5 — Selección sencilla: solo amarillo, sin contorno duplicado ni resplandor. */
+#setup .setup-mode-hit.selected{
+  border:1px solid #f3cf79!important;
+  background:#e6bd63!important;
+  color:#211a10!important;
+  box-shadow:none!important;
+}
+#setup .setup-mode-hit.selected:after{
+  content:none!important;
+  display:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+#setup .setup-mode-hit.selected .mode-icon{color:#332511!important}
+
+
+/* v0.10.6 — Sorteo de salida antes de iniciar la partida. */
+.draw-screen{
+ position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;
+ padding:16px;overflow-y:auto;background:radial-gradient(ellipse at top,#1d2d46,#080e1b 72%);
+}
+.draw-panel{
+ width:min(100%,680px);margin:auto;padding:clamp(16px,4vw,28px);
+ border:2px solid #c49a4b;border-radius:18px;
+ background:linear-gradient(155deg,#101d31,#071225 65%,#101827);
+ color:#fff0ce;box-shadow:0 12px 40px #000b,inset 0 0 0 2px #f2d68b18;
+ text-align:center;
+}
+.draw-topline{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#d7b66c;font:700 11px Georgia,serif;letter-spacing:.16em}
+.draw-back{min-height:36px;padding:6px 12px;border:1px solid #b98d45;border-radius:999px;background:#10233d;color:#ffe5a8;font:600 13px Georgia,serif}
+.draw-emblem{margin:8px 0 0;color:#e8c16d;font:28px Georgia,serif}
+.draw-panel h2{margin:3px 0 8px;color:#f9dfa0;font:700 clamp(23px,5vw,34px) Georgia,serif}
+.draw-round-title{margin:0 0 16px;color:#d6c7a9;font:14px Georgia,serif;line-height:1.45}
+.draw-current{
+ min-height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+ margin:0 auto 8px;padding:10px;border:1px solid #b88e49;border-radius:12px;background:#071528;
+}
+.draw-current strong{color:#ffe6a5;font:700 20px Georgia,serif}
+.draw-current span{color:#cfc3aa;font-size:13px}
+.draw-die{display:grid;place-items:center;width:clamp(148px,34vw,180px);height:clamp(148px,34vw,180px);margin:10px auto 8px}
+.draw-die-vector{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 3px 4px #0006)}
+.draw-die.rolling .draw-die-vector{transform:rotate(12deg) scale(.94)}
+@keyframes drawDiceRoll{0%{transform:rotate(0) translateY(0)}25%{transform:rotate(95deg) translateY(-5px)}50%{transform:rotate(190deg) translateY(3px)}75%{transform:rotate(285deg) translateY(-4px)}100%{transform:rotate(360deg) translateY(0)}}
+.draw-die.rolling{animation:drawDiceRoll .7s ease-in-out}
+.draw-instruction{min-height:38px;margin:6px 0 12px;color:#eadcbf;font:14px/1.45 Georgia,serif}
+.draw-results{display:grid;gap:8px;margin:0 auto 16px;text-align:left}
+.draw-result-round{padding:9px 11px;border:1px solid #55452d;border-radius:10px;background:#0a1729}
+.draw-result-round>strong{display:block;margin-bottom:6px;color:#e6c477;font:700 12px Georgia,serif;letter-spacing:.08em;text-transform:uppercase}
+.draw-result-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;color:#f2e6cb;font:14px Georgia,serif}
+.draw-result-row+.draw-result-row{border-top:1px solid #ffffff12}
+.draw-result-score{display:grid;place-items:center;min-width:32px;height:32px;padding:0 8px;border:1px solid #c69b50;border-radius:8px;background:#12243a;color:#ffe3a0;font:800 18px Georgia,serif}
+.draw-result-score.high{background:#e6bd63;color:#211a10;border-color:#f3cf79}
+.draw-action{
+ display:block;width:min(100%,360px);min-height:50px;margin:8px auto 0;padding:10px 18px;
+ border:2px solid #e8c878;border-radius:999px;
+ background:linear-gradient(#1b4778,#09213e);color:#fff0bd;
+ font:700 17px Georgia,serif;letter-spacing:.04em;box-shadow:0 3px 12px #0008,inset 0 0 0 1px #fff2;
+}
+.draw-action:disabled{opacity:.45;cursor:wait}
+.draw-action.hidden{display:none!important}
+@media(prefers-reduced-motion:reduce){.draw-die.rolling{animation:none}}
+
+
+/* v0.10.7 — pantalla de partida adaptable a horizontal y vertical */
+#game{width:100%;margin:0 auto}
+#game .layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;align-items:start;gap:14px}
+#game .layout>.panel,
+#game .side{
+  background:linear-gradient(145deg,rgba(8,28,49,.97),rgba(13,43,68,.96) 55%,rgba(5,20,36,.98));
+  border:1px solid rgba(216,183,109,.72);
+  border-radius:13px;
+  box-shadow:inset 0 0 0 1px rgba(255,226,164,.08),0 7px 20px rgba(0,0,0,.28);
+}
+#game .layout>.panel:first-child{padding:10px}
+#game .side{padding:13px;gap:12px}
+#game .label{color:#e3c783;letter-spacing:.12em}
+#game .turn{color:#fff0cf;font:clamp(1.05rem,2vw,1.35rem) Georgia,serif;line-height:1.25}
+#game .status{color:#e7dcc6;background:rgba(2,13,25,.42);border:1px solid rgba(216,183,109,.24);border-radius:8px;padding:10px;min-height:0}
+#game .player{background:linear-gradient(90deg,rgba(255,255,255,.09),rgba(255,255,255,.025));border:1px solid rgba(216,183,109,.18);border-radius:8px;color:#f8f0dd}
+#game .player.current{outline:1px solid #e4c16f;background:rgba(216,183,109,.14)}
+#game .primary{background:linear-gradient(180deg,#f1d58e,#bd8d3c);border:1px solid #ffe5a5;color:#2b1b0b;box-shadow:inset 0 1px rgba(255,255,255,.55),0 3px 8px #0005}
+#game .secondary{background:linear-gradient(180deg,#173b5b,#091d33);border:1px solid #c49a51;color:#f8e6bd}
+#game .note{color:#b9c4ce}
+#game:before{content:"LOS JUEGOS DE GONGONIA";display:block;text-align:center;margin:0 0 10px;color:#e9ce91;font:600 clamp(.8rem,1.5vw,1rem) Georgia,serif;letter-spacing:.22em;text-shadow:0 2px 5px #000}
+@media (orientation:landscape) and (min-width:700px){
+  .app:has(#game:not(.hidden)){max-width:1320px;padding:10px 14px 18px}
+  #game .layout{grid-template-columns:minmax(0,1fr) clamp(245px,24vw,310px);gap:16px}
+  #game .layout>.panel:first-child{padding:12px}
+  #game .side{display:flex;flex-direction:column}
+  #game .side .wide{width:100%}
+  #game .players{gap:7px}
+  #game .player{padding:9px;font-size:.84rem}
+  #game .dice{grid-template-columns:66px minmax(0,1fr);gap:12px}
+  #game .die{width:64px;height:64px}
+  #game #roll{min-height:52px}
+  #game .side>.wide:last-child{display:flex;flex-wrap:wrap;gap:7px}
+  #game .side>.wide:last-child button{flex:1 1 42%}
+}
+@media (orientation:portrait), (max-width:699px){
+  .app:has(#game:not(.hidden)){max-width:760px;padding:8px 8px 18px}
+  #game .layout{grid-template-columns:minmax(0,1fr);gap:9px}
+  #game .layout>.panel:first-child{padding:5px}
+  #game .side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:10px}
+  #game .side>.wide{grid-column:1/-1}
+  #game .side>.dice{grid-column:1/-1;display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:12px;padding:8px 10px;border:1px solid rgba(216,183,109,.3);border-radius:9px;background:rgba(2,13,25,.34)}
+  #game .die{width:58px;height:58px}
+  #game #roll{min-height:48px}
+  #game .side .players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  #game .player{padding:7px;font-size:.74rem;min-width:0}
+  #game .player b{overflow-wrap:anywhere}
+  #game .side>.wide:last-child{display:flex;flex-wrap:wrap;gap:6px}
+  #game .side>.wide:last-child button{flex:1 1 calc(50% - 6px);padding:9px 10px}
+  #game:before{margin:0 0 6px;font-size:.76rem}
+  #game .note{margin-top:7px}
+}
+@media (max-width:380px){
+  #game .side .players{grid-template-columns:1fr 1fr}
+  #game .player{font-size:.68rem;padding:6px}
+  #game .side>.wide:last-child button{font-size:.78rem}
+}
+
+
+/* v0.10.8 — ajuste de altura para iPad/tablet en horizontal */
+@media screen and (orientation:landscape) and (min-width:700px){
+  html,body{min-height:100%;overflow-x:hidden}
+  .app:has(#game:not(.hidden)){
+    max-width:1440px;
+    padding:6px 12px 8px;
+  }
+  #game:before{margin:0 0 5px;font-size:.78rem;line-height:1.1}
+  #game .layout{
+    grid-template-columns:minmax(0,1fr) clamp(245px,23vw,300px);
+    align-items:center;
+    gap:12px;
+  }
+  #game .layout>.panel:first-child{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-width:0;
+    min-height:0;
+    padding:7px;
+  }
+  #game .layout>.panel:first-child .board{
+    width:min(100%,calc(100dvh - 112px));
+    max-width:calc(100dvh - 112px);
+    flex:0 1 auto;
+    margin-inline:auto;
+  }
+  #game .side{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:7px;
+    max-height:calc(100dvh - 42px);
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    padding:9px;
+  }
+  #game .label{font-size:.66rem;line-height:1.1}
+  #game .turn{font-size:clamp(.98rem,1.35vw,1.18rem);line-height:1.14;margin:3px 0}
+  #game .dice{grid-template-columns:48px minmax(0,1fr);gap:8px}
+  #game .die{width:46px;height:46px}
+  #game #roll{min-height:40px;padding:7px 9px;font-size:.88rem}
+  #game .status{font-size:.77rem;line-height:1.3;padding:7px 8px;min-height:0}
+  #game .players{gap:4px}
+  #game .player{padding:5px 7px;font-size:.72rem;line-height:1.15;min-height:0}
+  #game .player .right{font-size:.64rem;white-space:nowrap}
+  #game .side>.wide:last-child{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+  #game .side>.wide:last-child button{min-width:0;min-height:36px;padding:6px 7px;font-size:.76rem;line-height:1.12}
+  #game .note{display:none}
+}
+@media screen and (orientation:landscape) and (min-width:700px) and (max-height:700px){
+  #game .layout>.panel:first-child .board{
+    width:min(100%,calc(100dvh - 92px));
+    max-width:calc(100dvh - 92px);
+  }
+  #game .side{gap:5px;padding:7px}
+  #game .player{padding:4px 6px;font-size:.68rem}
+  #game .side>.wide:last-child button{min-height:32px;font-size:.7rem}
+}
+
+
+/* v0.10.9 — recuperar riqueza visual de la pantalla de partida */
+#game{
+  position:relative;
+  padding:0 2px 5px;
+  background:
+    radial-gradient(ellipse at 18% 45%,rgba(34,91,119,.17),transparent 42%),
+    radial-gradient(ellipse at 84% 52%,rgba(194,143,58,.10),transparent 38%);
+}
+#game:before{
+  content:"✦  LOS JUEGOS DE GONGONIA  ✦";
+  display:block;
+  text-align:center;
+  margin:0 0 9px;
+  padding:3px 0 8px;
+  color:#f0d28f;
+  font:600 clamp(.82rem,1.35vw,1rem) Georgia,serif;
+  letter-spacing:.2em;
+  text-shadow:0 2px 5px #000,0 0 12px #d8b76d55;
+  border-bottom:1px solid #d8b76d66;
+}
+#game .layout>.panel:first-child{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  background:
+    radial-gradient(ellipse at 50% 48%,rgba(54,91,113,.48),transparent 64%),
+    radial-gradient(circle at 8% 10%,rgba(216,183,109,.12),transparent 22%),
+    radial-gradient(circle at 92% 90%,rgba(216,183,109,.11),transparent 24%),
+    linear-gradient(145deg,#0a2036 0%,#123a56 48%,#081a2d 100%);
+  border:2px solid #b99453;
+  border-radius:15px;
+  box-shadow:inset 0 0 0 2px #f2d99a20,inset 0 0 34px #020b17a8,0 8px 22px #0007;
+}
+#game .layout>.panel:first-child:before{
+  content:"";
+  position:absolute;
+  inset:7px;
+  z-index:-1;
+  border:1px solid #e3c17b88;
+  border-radius:9px;
+  background:
+    radial-gradient(circle at 12px 12px,#e6c47c 0 2px,transparent 2.7px),
+    radial-gradient(circle at calc(100% - 12px) 12px,#e6c47c 0 2px,transparent 2.7px),
+    radial-gradient(circle at 12px calc(100% - 12px),#e6c47c 0 2px,transparent 2.7px),
+    radial-gradient(circle at calc(100% - 12px) calc(100% - 12px),#e6c47c 0 2px,transparent 2.7px);
+  pointer-events:none;
+}
+#game .layout>.panel:first-child .board{
+  position:relative;
+  z-index:1;
+  filter:drop-shadow(0 5px 9px #0008);
+}
+#game .side{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 100% 0%,rgba(218,177,95,.18),transparent 35%),
+    radial-gradient(circle at 0% 100%,rgba(46,105,135,.2),transparent 40%),
+    linear-gradient(155deg,#102f49 0%,#0a2037 55%,#071728 100%);
+  border:2px solid #c49a57;
+  border-radius:15px;
+  box-shadow:inset 0 0 0 2px #f3dba022,inset 0 0 25px #0008,0 8px 22px #0008;
+}
+#game .side:before{
+  content:"✧";
+  position:absolute;
+  z-index:-1;
+  right:9px;
+  top:3px;
+  color:#e4c27c;
+  opacity:.32;
+  font:34px Georgia,serif;
+  text-shadow:0 0 12px #d8b76d;
+  pointer-events:none;
+}
+#game .side:after{
+  content:"GONGONIA  ·  KELTA  ·  BRUNIA  ·  ROUTA";
+  display:block;
+  order:10;
+  padding-top:7px;
+  border-top:1px solid #d8b76d55;
+  color:#c9ad75;
+  text-align:center;
+  letter-spacing:.12em;
+  font:9px Georgia,serif;
+  opacity:.8;
+}
+#game .side>*{position:relative;z-index:1}
+#game .label{
+  color:#e6c77f;
+  font:700 .68rem Georgia,serif;
+  letter-spacing:.17em;
+  text-shadow:0 1px 3px #000;
+}
+#game .turn{
+  color:#fff0cf;
+  text-shadow:0 2px 4px #0009;
+  font-family:Georgia,serif;
+}
+#game .status{
+  background:linear-gradient(135deg,#081a2bba,#163b55a8);
+  border:1px solid #d0ad6a66;
+  border-radius:9px;
+  box-shadow:inset 0 1px #ffffff12,0 3px 8px #0004;
+}
+#game .player{
+  background:linear-gradient(100deg,#ffffff12,#ffffff05 65%,#d8b76d0b);
+  border:1px solid #d8b76d44;
+  box-shadow:inset 0 1px #ffffff0c,0 2px 5px #0003;
+}
+#game .player.current{
+  outline:1px solid #f0d18a;
+  background:linear-gradient(100deg,#b58a3c38,#ffffff0c);
+  box-shadow:inset 0 0 12px #d8b76d20,0 0 8px #d8b76d22;
+}
+#game .primary{
+  background:linear-gradient(180deg,#f8dfa0 0%,#d2a64f 52%,#a9772f 100%);
+  border:1px solid #ffe8ac;
+  border-radius:10px;
+  color:#2b1b0b;
+  box-shadow:inset 0 1px #fff9d9, inset 0 -2px #70471855,0 4px 8px #0007;
+  text-shadow:0 1px #fff6d7;
+}
+#game .secondary{
+  background:linear-gradient(180deg,#1b4564,#0b243b 72%,#071a2d);
+  border:1px solid #c49a57;
+  border-radius:9px;
+  color:#f7e5bd;
+  box-shadow:inset 0 1px #ffffff20,inset 0 -1px #0005,0 3px 6px #0005;
+}
+#game .note{color:#c3cbd0}
+@media screen and (orientation:landscape) and (min-width:700px){
+  .app:has(#game:not(.hidden)){max-width:1500px;padding:5px 10px 7px}
+  #game:before{margin-bottom:6px;padding-bottom:6px}
+  #game .layout{grid-template-columns:minmax(0,1fr) clamp(270px,24vw,330px);gap:13px}
+  #game .layout>.panel:first-child{padding:7px}
+  #game .layout>.panel:first-child .board{
+    width:min(100%,calc(100dvh - 88px));
+    max-width:calc(100dvh - 88px);
+  }
+  #game .side{padding:10px;gap:8px}
+  #game .label{font-size:.7rem}
+  #game .turn{font-size:clamp(1.02rem,1.5vw,1.28rem);line-height:1.17}
+  #game .dice{grid-template-columns:54px minmax(0,1fr);gap:9px}
+  #game .die{width:52px;height:52px}
+  #game #roll{min-height:44px;padding:8px 10px;font-size:.9rem}
+  #game .status{font-size:.8rem;padding:8px 9px}
+  #game .players{gap:5px}
+  #game .player{padding:6px 8px;font-size:.76rem}
+  #game .player .right{font-size:.66rem}
+  #game .side>.wide:last-child{gap:6px}
+  #game .side>.wide:last-child button{min-height:38px;padding:7px 8px;font-size:.78rem}
+}
+@media screen and (orientation:landscape) and (min-width:700px) and (max-height:700px){
+  #game .layout>.panel:first-child .board{width:min(100%,calc(100dvh - 78px));max-width:calc(100dvh - 78px)}
+  #game .side{gap:6px;padding:8px}
+  #game .player{padding:5px 7px;font-size:.7rem}
+  #game .side>.wide:last-child button{min-height:34px;font-size:.72rem}
+}
+
+
+/* v0.10.10 — extender el panel de turnos a la altura del tablero */
+@media screen and (orientation:landscape) and (min-width:700px){
+  #game .layout{
+    grid-template-columns:minmax(0,1fr) clamp(300px,25vw,365px);
+    align-items:stretch;
+    gap:13px;
+  }
+  #game .layout>.panel:first-child{
+    align-self:stretch;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  #game .side{
+    align-self:stretch;
+    height:100%;
+    min-height:100%;
+    max-height:none;
+    overflow:visible;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:10px;
+    padding:13px 12px;
+  }
+  #game .side>.wide:first-child{padding:4px 2px 8px}
+  #game .side>.dice{
+    padding:9px 8px;
+    border-top:1px solid #d8b76d44;
+    border-bottom:1px solid #d8b76d44;
+  }
+  #game .side>.status{
+    flex:0 1 auto;
+    margin:0;
+    min-height:76px;
+    display:flex;
+    align-items:center;
+  }
+  #game .side>.wide:has(.players){flex:1 1 auto;display:flex;flex-direction:column;justify-content:center}
+  #game .side .players{gap:8px}
+  #game .side .player{padding:9px 10px;font-size:.8rem;min-height:46px}
+  #game .side>.wide:last-child{
+    margin-top:auto;
+    padding-top:9px;
+    border-top:1px solid #d8b76d44;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+  #game .side>.wide:last-child button{
+    min-height:43px;
+    padding:8px 9px;
+    font-size:.82rem;
+  }
+}
+@media screen and (orientation:landscape) and (min-width:700px) and (max-height:700px){
+  #game .side{padding:8px;gap:5px}
+  #game .side .player{padding:6px 8px;min-height:36px;font-size:.72rem}
+  #game .side>.wide:last-child button{min-height:35px;font-size:.74rem}
+  #game .side>.status{min-height:54px}
+}
+
+
+/* v0.10.11 — decoración de los márgenes y del espacio libre del panel */
+@media screen and (orientation:landscape) and (min-width:700px){
+  #game .layout>.panel:first-child:after{
+    content:"";
+    position:absolute;
+    inset:10px;
+    z-index:0;
+    border-radius:9px;
+    background:
+      linear-gradient(90deg,rgba(5,20,34,.08),rgba(5,20,34,.02) 28%,rgba(5,20,34,.02) 72%,rgba(5,20,34,.08)),
+      url("ornamento-lateral-partida.svg?v=0.10.11") center / 100% 100% no-repeat;
+    opacity:.96;
+    pointer-events:none;
+  }
+  #game .side>.wide:has(.players){
+    position:relative;
+    isolation:isolate;
+    overflow:hidden;
+    border-radius:10px;
+    padding:9px 5px;
+    background:
+      linear-gradient(180deg,rgba(7,24,41,.2),rgba(8,27,45,.04) 48%,rgba(7,24,41,.22));
+  }
+  #game .side>.wide:has(.players):before{
+    content:"";
+    position:absolute;
+    z-index:0;
+    inset:0;
+    background:
+      radial-gradient(ellipse at center,rgba(13,43,66,.08),rgba(7,24,41,.25)),
+      url("sello-cuatro-reinos.svg?v=0.10.11") center / min(68%,230px) auto no-repeat;
+    opacity:.22;
+    pointer-events:none;
+  }
+  #game .side>.wide:has(.players)>*{
+    position:relative;
+    z-index:1;
+  }
+}
+
+
+/* v0.10.12 — mesa de madera medieval y mantel azul bajo el tablero */
+#game{
+  background-color:#3f2819;
+  background-image:
+    linear-gradient(180deg,rgba(16,10,6,.08),rgba(16,10,6,.16)),
+    url("mesa-mantel-horizontal-v0113.svg");
+  background-position:center center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  border-radius:13px;
+  padding:0 3px 7px;
+}
+#game .layout>.panel:first-child{
+  background:rgba(10,28,42,.12);
+  border:1px solid rgba(194,153,91,.5);
+  box-shadow:inset 0 0 0 1px rgba(244,220,171,.08),0 5px 14px rgba(0,0,0,.24);
+}
+#game .layout>.panel:first-child:after{
+  display:none!important;
+  background:none!important;
+}
+#game .layout>.panel:first-child:before{
+  background:none;
+  border-color:rgba(218,183,119,.45);
+}
+#game .side{
+  background:
+    linear-gradient(155deg,rgba(16,47,73,.97),rgba(7,23,39,.98));
+  border-color:#bd9454;
+  box-shadow:inset 0 0 0 2px rgba(243,219,160,.10),0 6px 16px rgba(0,0,0,.42);
+}
+@media screen and (orientation:landscape) and (min-width:700px){
+  #game{background-position:center center}
+  #game .layout>.panel:first-child{backdrop-filter:none}
+}
+@media screen and (orientation:portrait), (max-width:699px){
+  #game{
+    background-size:auto 100%;
+    background-position:center top;
+    border-radius:10px;
+  }
+}
+
+
+/* v0.10.13 — fijar la posición del tablero durante toda la partida */
+@media screen and (orientation:landscape) and (min-width:700px){
+  #game .layout{
+    align-items:start!important;
+  }
+  #game .layout>.panel:first-child{
+    align-self:start!important;
+    margin-top:0!important;
+  }
+  #game .side{
+    align-self:start!important;
+    justify-content:flex-start!important;
+    height:calc(100dvh - 64px);
+    max-height:calc(100dvh - 64px);
+    min-height:0;
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+    scrollbar-gutter:stable;
+  }
+  #game{
+    overflow-anchor:none;
+  }
+  #game .layout,
+  #game .layout>.panel:first-child,
+  #game .board{
+    overflow-anchor:none;
+  }
+}
+
+
+/* v0.10.14 — compatibilidad de nombres de jugador con emojis en iOS/iPadOS */
+#setup input.player-name{
+  font-family:system-ui,-apple-system,"Apple Color Emoji","Segoe UI Emoji",sans-serif!important;
+  color:#fff4dd!important;
+  -webkit-text-fill-color:currentColor!important;
+  font-variant-emoji:emoji;
+  caret-color:#f7d47c;
+}
+#setup input.player-name::placeholder{
+  font-family:system-ui,-apple-system,"Apple Color Emoji","Segoe UI Emoji",sans-serif!important;
+}
+
+
+
+
+/* v0.10.20 — el dorado colorea las tres barras originales, sin crear barras nuevas */
+.home-volume-fill{
+ position:absolute;z-index:30;display:block;pointer-events:none;
+ background:transparent;border:0;border-radius:0;opacity:1;
+}
+.home-volume-fill.is-active{
+ background:linear-gradient(180deg,#ffe9a8 0%,#f6d47e 28%,#e8b657 68%,#bd812f 100%)!important;
+ box-shadow:inset 0 0 0 1px rgba(255,238,183,.52),0 0 2px rgba(222,170,78,.32);
+}
+.home-volume-hit{
+ position:absolute!important;z-index:14!important;display:block!important;
+ left:85.25%!important;top:79.9%!important;width:5.45%!important;height:3.45%!important;
+ min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;
+ border:0!important;border-radius:0!important;background:transparent!important;
+ opacity:.001!important;box-shadow:none!important;cursor:pointer;
+ touch-action:manipulation;-webkit-appearance:none;appearance:none;
+}
+.home-volume-hit:focus-visible{outline:2px solid #ffe4a1!important;outline-offset:2px!important}
+
+/* v0.11.0 — cuadro de estadísticas locales en el menú principal */
+.home-stats-modal{
+ position:fixed;z-index:1400;inset:0;display:flex;align-items:center;justify-content:center;
+ padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+ background:rgba(3,9,18,.78);
+ -webkit-backdrop-filter:blur(6px);
+ backdrop-filter:blur(6px);
+}
+.home-stats-modal.hidden{display:none!important}
+.home-stats-card{
+ position:relative;isolation:isolate;overflow:auto;overscroll-behavior:contain;
+ width:min(94vw,540px);max-height:calc(100dvh - 32px);
+ padding:24px 20px 16px;
+ border:2px solid #c99a4d;border-radius:17px;
+ background:
+  radial-gradient(ellipse at 50% 0%,rgba(36,86,119,.34),transparent 54%),
+  linear-gradient(145deg,rgba(9,31,52,.99),rgba(5,19,34,.99) 72%,rgba(10,28,45,.99));
+ box-shadow:0 18px 55px #000d,inset 0 0 0 2px rgba(250,220,157,.10),inset 0 0 28px rgba(0,0,0,.42);
+ color:#f8f0dd;text-align:center;
+}
+.home-stats-card:before{
+ content:"";position:absolute;z-index:-1;inset:7px;border:1px solid rgba(222,190,128,.35);border-radius:10px;pointer-events:none;
+}
+.home-stats-close{
+ position:absolute;right:12px;top:10px;z-index:2;width:34px;height:34px;min-height:34px;
+ padding:0;border:1px solid #c99a4d;border-radius:50%;
+ background:linear-gradient(145deg,#153955,#081d31);color:#f4d99b;font-size:24px;line-height:1;
+ box-shadow:inset 0 1px #fff3,0 2px 6px #0008;
+}
+.home-stats-emblem{margin:0 auto 3px;color:#e5bf76;font:25px Georgia,serif;text-shadow:0 0 12px #d49c48aa}
+.home-stats-card h2{
+ margin:0 36px 4px;color:#f2d18e;font:700 clamp(1.2rem,4.5vw,1.65rem) Georgia,serif;
+ letter-spacing:.04em;text-shadow:0 2px 5px #000;
+}
+.home-stats-subtitle{margin:0 0 17px;color:#d5c6a6;font:clamp(.72rem,2.4vw,.86rem) Georgia,serif}
+.home-stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.home-stat-tile{
+ min-width:0;min-height:122px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+ padding:12px 8px;border:1px solid rgba(210,170,99,.75);border-radius:10px;
+ background:
+  radial-gradient(ellipse at 50% 0%,rgba(54,104,140,.25),transparent 60%),
+  linear-gradient(150deg,#102f4c,#081d33 78%);
+ box-shadow:inset 0 1px rgba(255,255,255,.08),0 3px 8px #0005;
+}
+.home-stat-icon{color:#e9c477;font:27px Georgia,serif;line-height:1;text-shadow:0 2px 5px #000}
+.home-stat-tile strong{
+ display:block;max-width:100%;overflow-wrap:anywhere;color:#f2d18b;
+ font:700 clamp(1.25rem,5vw,1.8rem) Georgia,serif;line-height:1.1;
+ text-shadow:0 2px 5px #0008;
+}
+#homeStatRealm{font-size:clamp(.95rem,3.8vw,1.28rem)}
+.home-stat-tile>span:last-child{color:#e6dcc7;font-size:clamp(.69rem,2.2vw,.82rem);line-height:1.2}
+.home-stats-footnote{margin:14px 0 0;color:#b9ad98;font-size:.69rem}
+.home-stats-close:focus-visible{outline:2px solid #ffe7a6;outline-offset:3px}
+@media(max-width:380px){
+ .home-stats-card{padding:21px 13px 13px}
+ .home-stats-grid{gap:7px}
+ .home-stat-tile{min-height:110px;padding:9px 5px}
+}
+@media(max-height:520px) and (orientation:landscape){
+ .home-stats-card{width:min(90vw,650px);padding:12px 16px 10px}
+ .home-stats-emblem{display:none}
+ .home-stats-subtitle{margin-bottom:9px}
+ .home-stat-tile{min-height:90px;padding:7px}
+ .home-stats-grid{gap:8px}
+ .home-stats-footnote{margin-top:8px}
+}
+
+
+/* Celebración breve al completar un reino: la capa no bloquea el tablero ni los controles. */
+.victory-overlay{
+ position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;
+ padding:18px;overflow:hidden;pointer-events:none!important;
+ background:rgba(4,11,25,.76);
+ animation:victory-backdrop 4s ease both;
+}
+.victory-overlay *{pointer-events:none!important}
+.victory-card{
+ position:relative;z-index:2;width:min(92vw,560px);padding:clamp(23px,5vw,38px) 22px;
+ text-align:center;border:3px solid var(--winner-color,#d8b76d);border-radius:18px;
+ background:
+  radial-gradient(ellipse at 50% -12%,rgba(239,203,119,.24),transparent 55%),
+  linear-gradient(145deg,#173451 0%,#0a2039 58%,#07152a 100%);
+ box-shadow:0 0 0 5px rgba(216,183,109,.15),inset 0 1px rgba(255,255,255,.13),0 18px 55px #000b;
+ animation:victory-card-pop 4s ease both;
+}
+.victory-card:before,.victory-card:after{
+ content:"";position:absolute;left:18px;right:18px;height:1px;
+ background:linear-gradient(90deg,transparent,#e8c477,transparent);
+}
+.victory-card:before{top:12px}.victory-card:after{bottom:12px}
+.victory-crest{
+ display:grid;place-items:center;width:clamp(58px,13vw,78px);height:clamp(58px,13vw,78px);
+ margin:0 auto 10px;border:2px solid #f6dfa5;border-radius:50%;
+ background:radial-gradient(circle at 35% 25%,#fff0bd,#d4a64f 58%,#76501e);
+ color:#18263b;font:clamp(31px,7vw,44px) Georgia,serif;
+ box-shadow:0 0 0 5px rgba(224,187,103,.14),0 4px 14px #0008;
+}
+.victory-kicker{color:#e8cf96;font:600 clamp(.65rem,2vw,.82rem) Georgia,serif;letter-spacing:.22em}
+.victory-title{
+ margin:8px 0 7px;color:#ffe7a9;font:700 clamp(2rem,8vw,3.5rem) Georgia,serif;
+ line-height:1.02;text-shadow:0 3px 0 #60451f,0 5px 14px #000b;
+}
+.victory-kingdom{
+ margin:8px 0 5px;color:#fff1ce;font:700 clamp(1.2rem,5vw,2rem) Georgia,serif;
+ letter-spacing:.08em;text-shadow:0 2px 7px #0009;
+}
+.victory-player{margin:8px 0 0;color:#e5d7b8;font:clamp(.9rem,3.2vw,1.1rem) Georgia,serif}
+.victory-confetti{position:absolute;inset:0;z-index:1;overflow:hidden}
+.victory-confetti-piece{
+ position:absolute;top:-12vh;width:clamp(5px,1.3vw,9px);height:clamp(10px,2.3vw,17px);
+ border-radius:1px;opacity:0;transform-origin:center;
+ animation:victory-confetti-fall var(--duration,3.4s) cubic-bezier(.16,.62,.34,1) var(--delay,0s) forwards;
+}
+@keyframes victory-backdrop{
+ 0%{background:rgba(4,11,25,0)}
+ 8%,88%{background:rgba(4,11,25,.76)}
+ 100%{background:rgba(4,11,25,0)}
+}
+@keyframes victory-card-pop{
+ 0%{opacity:0;transform:translateY(18px) scale(.72)}
+ 9%{opacity:1;transform:translateY(0) scale(1.03)}
+ 16%,84%{opacity:1;transform:translateY(0) scale(1)}
+ 100%{opacity:0;transform:translateY(-8px) scale(.94)}
+}
+@keyframes victory-confetti-fall{
+ 0%{opacity:0;transform:translate3d(0,-8vh,0) rotate(0deg)}
+ 10%{opacity:.98}
+ 85%{opacity:.95}
+ 100%{opacity:0;transform:translate3d(var(--drift,0px),112vh,0) rotate(var(--spin,650deg))}
+}
+@media(max-width:380px){
+ .victory-card{padding:22px 14px}
+ .victory-kicker{letter-spacing:.15em}
+}
+
+
+/* Control de dado táctil y turno resaltado en el espacio lateral libre. */
+.dice-interaction{
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+ justify-content:center;
+ gap:5px;
+ width:100%;
+ padding:5px 0 9px;
+}
+.dice-interaction .die{
+ width:104px;
+ height:104px;
+ cursor:pointer;
+ border-radius:12px;
+ touch-action:manipulation;
+ -webkit-tap-highlight-color:transparent;
+ transition:filter .15s ease,transform .15s ease;
+}
+.dice-interaction .die:not([aria-disabled="true"]):active{transform:scale(.94)}
+.dice-interaction .die[aria-disabled="true"]{cursor:default;opacity:.82}
+.dice-interaction .die:focus-visible{outline:2px solid #f4d99b;outline-offset:5px;border-radius:12px}
+.dice-interaction .die-turn-wrap{width:100%;text-align:center;padding:2px 5px 0}
+.dice-interaction .die-turn{font: bold 1.45rem/1.22 Georgia,serif;color:#f4d99b;text-shadow:0 1px 3px #000;margin:3px auto 0;max-width:100%;overflow-wrap:anywhere}
+.dice-interaction #roll{display:none!important}
+@media(max-width:650px){
+ .dice-interaction{grid-column:1/-1}
+ .dice-interaction .die{width:96px;height:96px}
+ .dice-interaction .die-turn{font-size:1.38rem}
+}
+
+/* v0.11.1 — correcciones específicas para iPad en horizontal */
+@media screen and (orientation:landscape) and (min-width:700px){
+  /* El mantel deja de recortarse por arriba: sus esquinas coinciden con el marco. */
+  #game{
+    background-color:#0c2034!important;
+    background-image:
+      linear-gradient(180deg,rgba(6,22,38,.08),rgba(6,22,38,.13)),
+      url("mesa-mantel-horizontal-v0113.svg")!important;
+    background-size:100% 100%!important;
+    background-position:center center!important;
+    background-repeat:no-repeat!important;
+  }
+  /* Anula las antiguas reglas de 46–64 px que reducían el dado. */
+  #game .side>.dice.dice-interaction{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:7px!important;
+    width:100%!important;
+    padding:9px 6px 11px!important;
+    border-top:1px solid #d8b76d44;
+    border-bottom:1px solid #d8b76d44;
+  }
+  #game .side>.dice.dice-interaction .die{
+    display:block!important;
+    width:160px!important;
+    height:160px!important;
+    min-width:160px!important;
+    min-height:160px!important;
+    max-width:160px!important;
+    max-height:160px!important;
+    flex:none!important;
+    cursor:pointer;
+  }
+  #game .side>.dice.dice-interaction .die-turn-wrap{
+    display:block!important;
+    width:100%!important;
+    text-align:center!important;
+    padding:2px 4px 0!important;
+  }
+  #game .side>.dice.dice-interaction .die-turn{
+    font-size:clamp(1.16rem,1.65vw,1.38rem)!important;
+    line-height:1.2!important;
+    margin:4px auto 0!important;
+    color:#f4d99b!important;
+    text-align:center!important;
+    overflow-wrap:anywhere;
+  }
+  #game .side>.dice.dice-interaction #roll{display:none!important}
+}
+
+/* v0.11.6 — el dado y el jugador siempre van apilados, también en los breakpoints antiguos. */
+#game .side>.dice.dice-interaction{
+ display:flex!important;
+ flex-direction:column!important;
+ flex-wrap:nowrap!important;
+ align-items:center!important;
+ justify-content:center!important;
+ grid-template-columns:none!important;
+ grid-auto-flow:row!important;
+ gap:8px!important;
+ width:100%!important;
+}
+#game .side>.dice.dice-interaction .die{
+ display:block!important;
+ width:132px!important;
+ height:132px!important;
+ min-width:132px!important;
+ min-height:132px!important;
+ max-width:132px!important;
+ max-height:132px!important;
+ flex:0 0 132px!important;
+}
+#game .side>.dice.dice-interaction .die-art{
+ display:block!important;
+ width:100%!important;
+ height:100%!important;
+}
+#game .side>.dice.dice-interaction .dice-turn-wrap{
+ display:block!important;
+ width:100%!important;
+ max-width:100%!important;
+ flex:none!important;
+ text-align:center!important;
+}
+@media screen and (orientation:landscape) and (min-width:700px){
+ #game .side>.dice.dice-interaction .die{
+  width:160px!important;
+  height:160px!important;
+  min-width:160px!important;
+  min-height:160px!important;
+  max-width:160px!important;
+  max-height:160px!important;
+  flex:0 0 160px!important;
+ }
+}
+
+
+/* v0.11.3 — pantalla horizontal: recortes exactos de la ilustración original.
+   El tablero y el arte principal se muestran desde la imagen aprobada; los controles
+   inferiores se recortan del mismo archivo para evitar redibujarlos o duplicarlos. */
+@media (orientation: landscape) and (min-aspect-ratio: 1.15/1) {
+  #homeScreen.home-screen{
+    position:fixed!important;inset:0!important;z-index:100!important;
+    display:block!important;width:100vw!important;height:100dvh!important;
+    max-width:none!important;margin:0!important;padding:0!important;
+    overflow:hidden!important;border:0!important;border-radius:0!important;
+    background:radial-gradient(ellipse at 25% 45%,#263c52 0%,#111c2b 62%,#090f19 100%)!important;
+  }
+  #homeScreen .home-image-shell{
+    position:relative!important;display:grid!important;
+    grid-template-columns:minmax(0,min(65vw,calc(90dvh * 1.067))) minmax(0,1fr)!important;
+    align-items:center!important;gap:clamp(8px,1.2vw,16px)!important;
+    width:100vw!important;height:100dvh!important;max-width:none!important;
+    aspect-ratio:auto!important;margin:0!important;
+    padding:max(8px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))!important;
+    overflow:hidden!important;
+  }
+  #homeLandscapeArt.home-landscape-art{
+    position:relative!important;display:block!important;
+    width:100%!important;max-width:100%!important;max-height:90dvh!important;
+    aspect-ratio:1.067/1!important;align-self:center!important;
+    overflow:hidden!important;border-radius:5px!important;
+    box-shadow:0 7px 24px #0008,0 0 0 1px #d1ad6a55!important;
+  }
+  #homeLandscapeArt #homeExactArt{
+    position:absolute!important;inset:0!important;display:block!important;
+    width:100%!important;height:100%!important;max-width:none!important;
+    object-fit:cover!important;object-position:center top!important;
+    user-select:none!important;-webkit-user-drag:none!important;
+  }
+  #homeLandscapeArt #homeExactGngPlus{
+    left:26.5%!important;top:2.4%!important;width:8.5%!important;height:8.8%!important;
+    background:transparent!important;opacity:1!important;
+  }
+  #homeLandscapeArt #homeExactLanguageHeader{
+    left:68.5%!important;top:1.76%!important;width:29%!important;height:8.32%!important;
+    background:transparent!important;opacity:1!important;
+  }
+  #homeLandscapeArt .home-image-language-label{
+    left:75.4%!important;top:3.2%!important;width:14.5%!important;height:5.44%!important;
+    font-size:clamp(9px,1.35vw,16px)!important;
+  }
+  #homeLandscapeArt .home-language-menu{
+    left:70%!important;top:9.92%!important;width:27.5%!important;
+    max-height:70%!important;overflow:auto!important;
+  }
+  #homeLandscapeControls.home-landscape-controls{
+    grid-column:2!important;grid-row:1!important;
+    display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:auto auto auto auto auto auto!important;
+    align-content:center!important;align-items:center!important;justify-items:stretch!important;
+    gap:clamp(5px,.8vh,10px)!important;
+    width:100%!important;min-width:0!important;max-width:none!important;
+    max-height:94dvh!important;overflow:hidden!important;
+  }
+  #homeLandscapeControls .home-landscape-actions{
+    display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:clamp(3px,.55vw,7px)!important;width:100%!important;min-width:0!important;
+  }
+  #homeLandscapeControls .home-hotspot{
+    position:relative!important;inset:auto!important;
+    display:block!important;min-width:0!important;min-height:0!important;
+    width:100%!important;height:auto!important;margin:0!important;padding:0!important;
+    border:0!important;border-radius:0!important;opacity:1!important;
+    box-shadow:none!important;overflow:hidden!important;
+    background-repeat:no-repeat!important;background-color:transparent!important;
+    cursor:pointer!important;touch-action:manipulation!important;
+  }
+  #homeLandscapeControls #homeExactPlay{
+    aspect-ratio:5.072/1!important;
+    background-image:url("254B8872-2807-4A38-8683-F09BDD31B2BA.png")!important;
+    background-size:181.88% auto!important;background-position:50.33% 68.28%!important;
+  }
+  #homeLandscapeControls #homeExactPurchases{
+    aspect-ratio:2.373/1!important;
+    background-image:url("254B8872-2807-4A38-8683-F09BDD31B2BA.png")!important;
+    background-size:365.71% auto!important;background-position:9.14% 76.94%!important;
+  }
+  #homeLandscapeControls #homeExactStats{
+    aspect-ratio:2.534/1!important;
+    background-image:url("254B8872-2807-4A38-8683-F09BDD31B2BA.png")!important;
+    background-size:342.47% auto!important;background-position:49.24% 76.94%!important;
+  }
+  #homeLandscapeControls #homeExactSettings{
+    aspect-ratio:2.483/1!important;
+    background-image:url("254B8872-2807-4A38-8683-F09BDD31B2BA.png")!important;
+    background-size:349.49% auto!important;background-position:91% 76.94%!important;
+  }
+  #homeLandscapeControls .home-landscape-music{
+    position:relative!important;display:block!important;width:100%!important;
+    aspect-ratio:10.723/1!important;overflow:hidden!important;
+    background-image:url("254B8872-2807-4A38-8683-F09BDD31B2BA.png")!important;
+    background-repeat:no-repeat!important;background-size:115.06% auto!important;
+    background-position:50.75% 83.62%!important;
+  }
+  #homeLandscapeControls .home-volume-fill{
+    position:absolute!important;display:block!important;z-index:30!important;
+    pointer-events:none!important;border:0!important;border-radius:0!important;
+  }
+  /* Ajuste horizontal final: desplazar a la derecha y cubrir el borde azul restante. */
+  #homeLandscapeControls .home-volume-fill[data-step="1"]{left:90.5%!important;top:51.5%!important;width:1.7%!important;height:22%!important}
+  #homeLandscapeControls .home-volume-fill[data-step="2"]{left:92.4%!important;top:32.5%!important;width:1.7%!important;height:42.5%!important}
+  #homeLandscapeControls .home-volume-fill[data-step="3"]{left:94.3%!important;top:23.5%!important;width:1.7%!important;height:51%!important}
+  /* En horizontal: recuperar el dorado luminoso sin alterar el diseño vertical. */
+  #homeLandscapeControls .home-volume-fill.is-active{
+    background:linear-gradient(180deg,#fff5cf 0%,#ffe69a 28%,#f6ca68 68%,#d99b3c 100%)!important;
+    filter:brightness(1.18) saturate(1.12);
+    box-shadow:inset 0 0 0 1px rgba(255,248,214,.78),0 0 4px rgba(255,207,105,.58)!important;
+  }
+  #homeLandscapeControls .home-volume-hit{
+    position:absolute!important;left:89.8%!important;top:23%!important;
+    width:7.2%!important;height:68%!important;z-index:35!important;
+    opacity:.001!important;background:transparent!important;cursor:pointer!important;
+  }
+  #homeLandscapeControls .home-landscape-ad{
+    display:block!important;width:100%!important;aspect-ratio:7.739/1!important;
+    background-image:url("254B8872-2807-4A38-8683-F09BDD31B2BA.png")!important;
+    background-repeat:no-repeat!important;background-size:115.06% auto!important;
+    background-position:50.75% 91.48%!important;
+  }
+  #homeLandscapeControls #homeExactStory{
+    aspect-ratio:9.902/1!important;
+    background-image:url("254B8872-2807-4A38-8683-F09BDD31B2BA.png")!important;
+    background-size:169.54% auto!important;background-position:50% 96.07%!important;
+  }
+  #homeLandscapeControls .home-landscape-version{
+    display:block!important;text-align:center!important;justify-self:center!important;
+    color:#e7d3a7!important;font:clamp(10px,1.15vw,15px) Georgia,serif!important;
+    letter-spacing:.05em!important;text-shadow:0 1px 3px #000!important;
+    line-height:1.2!important;padding:2px 0!important;
+  }
+  #homeLandscapeControls .home-landscape-version span{padding:0 .45em!important;color:#d2ad6c!important}
+}
+
+/* En vertical se conserva el menú original, con la misma imagen y las mismas zonas táctiles. */
+@media (orientation: portrait), (max-aspect-ratio: 1.149/1) {
+  #homeLandscapeArt.home-landscape-art,
+  #homeLandscapeControls.home-landscape-controls,
+  #homeLandscapeControls .home-landscape-actions,
+  #homeLandscapeControls .home-landscape-music{
+    display:contents!important;
+  }
+  #homeLandscapeArt #homeExactArt{
+    position:static!important;display:block!important;width:100%!important;height:100%!important;
+    object-fit:contain!important;object-position:center!important;
+  }
+  #homeLandscapeControls .home-landscape-ad,
+  #homeLandscapeControls .home-landscape-version{display:none!important}
+  #homeLandscapeControls #homeExactPlay,
+  #homeLandscapeControls #homeExactPurchases,
+  #homeLandscapeControls #homeExactStats,
+  #homeLandscapeControls #homeExactSettings,
+  #homeLandscapeControls #homeExactStory{
+    position:absolute!important;display:block!important;
+    background:transparent!important;background-image:none!important;
+    box-shadow:none!important;opacity:1!important;
+  }
+  #homeLandscapeControls .home-volume-fill{
+    position:absolute!important;z-index:30!important;pointer-events:none!important;
+  }
+  #homeLandscapeControls .home-volume-hit{
+    position:absolute!important;background:transparent!important;opacity:.001!important;
+  }
+}
+
+</style></head><body><main class="app">
+
+<section id="homeScreen" class="home-screen" aria-label="Pantalla de inicio de LUDO">
+  <div id="homeImageShell" class="home-image-shell" aria-label="Ilustración principal y controles de Ludo de Gongonia">
+    <div id="homeLandscapeArt" class="home-landscape-art">
+      <img id="homeExactArt" src="254B8872-2807-4A38-8683-F09BDD31B2BA.png" alt="Pantalla de inicio original de LUDO: El Camino de la Concordia" />
+      <button id="homeExactGngPlus" class="home-hotspot" style="left:26.5%;top:1.5%;width:8.5%;height:5.5%" aria-label="Información sobre el saldo GNG"></button>
+      <button id="homeExactLanguageHeader" class="home-hotspot" style="left:68.5%;top:1.1%;width:29%;height:5.2%" aria-label="Abrir selector de idiomas" aria-expanded="false"></button>
+      <span id="homeImageLanguageLabel" class="home-image-language-label" hidden>Español</span>
+      <div id="homeLanguageMenu" class="home-language-menu" hidden role="menu" aria-label="Seleccionar idioma">
+        <button class="home-language-option" data-language="es" data-label="Español" role="menuitem">🇻🇪 <span>Español</span></button>
+        <button class="home-language-option" data-language="it" data-label="Italiano" role="menuitem">🇮🇹 <span>Italiano</span></button>
+        <button class="home-language-option" data-language="en" data-label="Inglés" role="menuitem">🇺🇸 <span>Inglés</span></button>
+        <button class="home-language-option" data-language="de" data-label="Alemán" role="menuitem">🇩🇪 <span>Alemán</span></button>
+        <button class="home-language-option" data-language="fr" data-label="Francés" role="menuitem">🇨🇵 <span>Francés</span></button>
+      </div>
+    </div>
+    <div id="homeLandscapeControls" class="home-landscape-controls" aria-label="Controles principales">
+      <button id="homeExactPlay" class="home-hotspot" style="left:21.5%;top:62.7%;width:57%;height:6.9%" aria-label="Jugar"></button>
+      <div class="home-landscape-actions">
+        <button id="homeExactPurchases" class="home-hotspot" style="left:5.6%;top:69.9%;width:28%;height:7.1%" aria-label="Compras"></button>
+        <button id="homeExactStats" class="home-hotspot" style="left:36%;top:69.9%;width:28%;height:7.1%" aria-label="Estadísticas"></button>
+        <button id="homeExactSettings" class="home-hotspot" style="left:66%;top:69.9%;width:28.5%;height:7.1%" aria-label="Ajustes"></button>
+      </div>
+      <div class="home-landscape-music" aria-label="Música y volumen">
+        <span class="home-volume-fill" data-step="1" style="left:85.64%;top:82.29%;width:1.08%;height:.91%" aria-hidden="true"></span>
+        <span class="home-volume-fill" data-step="2" style="left:87.30%;top:81.38%;width:.98%;height:1.82%" aria-hidden="true"></span>
+        <span class="home-volume-fill" data-step="3" style="left:88.96%;top:80.60%;width:.98%;height:2.60%" aria-hidden="true"></span>
+        <button id="homeVolumeHitArea" class="home-hotspot home-volume-hit" aria-label="Volumen de música. Toca una de las tres barras para seleccionar 33, 66 o 100 por ciento."></button>
+      </div>
+      <div class="home-landscape-ad" aria-label="Espacio publicitario opcional"></div>
+      <button id="homeExactStory" class="home-hotspot" style="left:30%;top:90.8%;width:40%;height:3.6%" aria-label="El origen de los Juegos"></button>
+      <div class="home-landscape-version">Gongonia Works <span aria-hidden="true">•</span> v0.11.3</div>
+    </div>
+  </div>
+  <div id="homeInfoModal" class="home-modal hidden" role="dialog" aria-modal="true" aria-labelledby="homeInfoTitle">
+    <div class="home-modal-card">
+      <button id="homeModalClose" class="home-modal-close" type="button" aria-label="Cerrar">×</button>
+      <div class="home-modal-emblem" aria-hidden="true">✦</div>
+      <h2 id="homeInfoTitle">Gongonia</h2>
+      <p id="homeInfoText"></p>
+      <button id="homeModalOk" class="home-modal-ok" type="button">Volver</button>
+    </div>
+  </div>
+
+  <div id="homeStatsModal" class="home-stats-modal hidden" role="dialog" aria-modal="true" aria-labelledby="homeStatsTitle">
+    <div class="home-stats-card">
+      <button id="homeStatsClose" class="home-stats-close" type="button" aria-label="Cerrar estadísticas">×</button>
+      <div class="home-stats-emblem" aria-hidden="true">✦</div>
+      <h2 id="homeStatsTitle">Estadísticas de Gongonia</h2>
+      <p class="home-stats-subtitle">La historia de las partidas en este dispositivo</p>
+      <div class="home-stats-grid">
+        <div class="home-stat-tile">
+          <span class="home-stat-icon" aria-hidden="true">⚔</span>
+          <strong id="homeStatGames">0</strong>
+          <span>Partidas jugadas</span>
+        </div>
+        <div class="home-stat-tile">
+          <span class="home-stat-icon" aria-hidden="true">⌛</span>
+          <strong id="homeStatTime">0 min</strong>
+          <span>Tiempo total de juego</span>
+        </div>
+        <div class="home-stat-tile">
+          <span class="home-stat-icon" aria-hidden="true">♟</span>
+          <strong id="homeStatPlayers">—</strong>
+          <span>Jugadores promedio</span>
+        </div>
+        <div class="home-stat-tile">
+          <span class="home-stat-icon" aria-hidden="true">♛</span>
+          <strong id="homeStatRealm">Sin datos</strong>
+          <span>Reino más victorioso</span>
+        </div>
+      </div>
+      <p class="home-stats-footnote">Estadísticas guardadas únicamente en este dispositivo.</p>
+    </div>
+  </div>
+</section>
+
+<section id="storyScreen" class="story-screen hidden" aria-label="Los Juegos de Gongonia: El camino de la concordia">
+  <div class="story-topbar">
+    <button id="storyBackTop" class="story-back" type="button"><span aria-hidden="true">‹</span> Volver al menú</button>
+    <span class="story-brand">GONGONIA WORKS</span>
+  </div>
+  <div class="story-cover">
+    <img id="storyArtwork" src="IMG_0912.JPG" alt="Un viajero contempla un camino hacia un gran castillo entre montañas al atardecer" />
+    <div class="story-cover-shade"></div>
+    <div class="story-cover-title">
+      <span>LOS JUEGOS DE GONGONIA</span>
+      <h1>El camino de la concordia</h1>
+      <div class="story-gold-rule" aria-hidden="true">✦ ◆ ✦</div>
+    </div>
+  </div>
+  <article class="story-article">
+    <p class="story-opening">Cuenta la tradición que, hace muchos siglos, los reinos de Gongonia, Kelta, Brunia y Routa atravesaron una época de rivalidades y desconfianza. Cada reino defendía sus propios intereses, y las disputas amenazaban con quebrar los lazos que unían a sus pueblos.</p>
+    <p>Para preservar la paz y fortalecer la unión entre sus tierras, los antiguos sabios propusieron una prueba diferente a cualquier batalla: una competición en la que los representantes de los cuatro reinos recorrerían un mismo camino, guiados por el azar, la paciencia y la estrategia.</p>
+    <p>Así nacieron los Juegos de Gongonia.</p>
+    <p>Desde entonces, cada reino envía a sus campeones para participar en esta antigua tradición. Las fichas parten de sus respectivos hogares y recorren el gran circuito hasta alcanzar la meta. En el camino pueden adelantarse, encontrarse con sus rivales o verse obligadas a regresar al punto de partida. Ninguna ventaja es eterna, pues el destino puede cambiar con cada lanzamiento del dado.</p>
+    <p>Los Juegos no se celebran para conquistar territorios ni humillar a los vencidos. Su verdadero propósito es recordar que la fortuna favorece hoy a unos y mañana a otros, que la astucia debe acompañarse de paciencia y que, a pesar de sus diferencias, los cuatro reinos comparten un mismo destino.</p>
+    <p>Al final, solo un reino alcanza la victoria. Pero, mientras Gongonia, Kelta, Brunia y Routa regresen dispuestos a competir de nuevo, la tradición habrá cumplido su propósito.</p>
+    <blockquote class="story-quote">Porque en Gongonia, la verdadera concordia no consiste en que todos recorran el camino al mismo ritmo, sino en que todos tengan la oportunidad de llegar a la meta.</blockquote>
+    <p class="story-ending">¡Que comiencen los Juegos de Gongonia!</p>
+  </article>
+  <div class="story-bottom">
+    <span class="story-gold-rule" aria-hidden="true">✦ ◆ ✦</span>
+    <button id="storyBackBottom" class="story-back story-back-bottom" type="button">Volver al menú</button>
+    <span class="story-footer">Gongonia Works · v0.10.1</span>
+  </div>
+</section>
+
+<section id="setup" class="setup-screen hidden" aria-label="El Consejo de los Cuatro Reinos">
+  <div class="setup-artboard" id="setupArtboard">
+    <img class="setup-background" src="assets/consejo-cuatro-reinos.JPG" alt="El Consejo de los Cuatro Reinos: Gongonia, Kelta, Brunia y Routa" draggable="false">
+    <div class="setup-player-panel" data-team="red"><span class="setup-panel-title">JUGADOR 1</span><span class="setup-panel-realm">GONGONIA</span></div>
+    <div class="setup-player-panel" data-team="blue"><span class="setup-panel-title">JUGADOR 2</span><span class="setup-panel-realm">KELTA</span></div>
+    <div class="setup-player-panel" data-team="green"><span class="setup-panel-title">JUGADOR 3</span><span class="setup-panel-realm">BRUNIA</span></div>
+    <div class="setup-player-panel" data-team="yellow"><span class="setup-panel-title">JUGADOR 4</span><span class="setup-panel-realm">ROUTA</span></div>
+    <button id="setupBack" class="setup-back" type="button" aria-label="Volver al menú principal">Volver</button>
+
+    <div class="setup-audio" aria-label="Controles de sonido">
+      <span id="musicLabel" class="setup-sr-only">Música de inicio: The Kelta Mountains</span>
+      <button id="musicToggle" class="setup-audio-button secondary" type="button">🔇 Activar música</button>
+      <button id="effectsToggle" class="setup-audio-button secondary" type="button">🔊 Efectos activados</button>
+      <span id="musicStatus" class="music-status" aria-live="polite"></span>
+    </div>
+
+    <div class="choice setup-native-player" data-team="red">
+      <input id="realm-red" class="realm-check" type="checkbox" value="red" checked>
+      <span class="setup-team-name setup-sr-only">Gongonia</span>
+      <input class="player-name" data-team="red" type="text" maxlength="24" value="" placeholder="Nombre del jugador 1" aria-label="Nombre del jugador de Gongonia">
+      <select class="player-mode" data-team="red" aria-label="Control de Gongonia">
+        <option value="human" selected>Persona</option><option value="bot">Bot básico</option><option value="strategic">Bot avanzado</option><option value="empty">Vacío</option>
+      </select>
+<div class="setup-mode-group" data-team="red" role="radiogroup" aria-label="Control del jugador de Gongonia">
+      <label class="setup-mode-hit"><input type="radio" name="mode-red" data-team="red" value="human"><span class="mode-icon">♙</span><span class="mode-text">Persona</span></label>
+      <label class="setup-mode-hit"><input type="radio" name="mode-red" data-team="red" value="bot"><span class="mode-icon">🤖</span><span class="mode-text">Bot básico</span></label>
+      <label class="setup-mode-hit"><input type="radio" name="mode-red" data-team="red" value="strategic"><span class="mode-icon">⚙</span><span class="mode-text">Bot avanzado</span></label>
+      <label class="setup-mode-hit"><input type="radio" name="mode-red" data-team="red" value="empty"><span class="mode-icon">○</span><span class="mode-text">Vacío</span></label>
+    </div>
+    </div>
+    <div class="choice setup-native-player" data-team="blue">
+      <input id="realm-blue" class="realm-check" type="checkbox" value="blue">
+      <span class="setup-team-name setup-sr-only">Kelta</span>
+      <input class="player-name" data-team="blue" type="text" maxlength="24" value="" placeholder="Nombre del jugador 2" aria-label="Nombre del jugador de Kelta">
+      <select class="player-mode" data-team="blue" aria-label="Control de Kelta">
+        <option value="human" selected>Persona</option><option value="bot">Bot básico</option><option value="strategic">Bot avanzado</option><option value="empty">Vacío</option>
+      </select>
+<div class="setup-mode-group" data-team="blue" role="radiogroup" aria-label="Control del jugador de Kelta">
+      <label class="setup-mode-hit"><input type="radio" name="mode-blue" data-team="blue" value="human"><span class="mode-icon">♙</span><span class="mode-text">Persona</span></label>
+      <label class="setup-mode-hit"><input type="radio" name="mode-blue" data-team="blue" value="bot"><span class="mode-icon">🤖</span><span class="mode-text">Bot básico</span></label>
+      <label class="setup-mode-hit"><input type="radio" name="mode-blue" data-team="blue" value="strategic"><span class="mode-icon">⚙</span><span class="mode-text">Bot avanzado</span></label>
+      <label class="setup-mode-hit"><input type="radio" name="mode-blue" data-team="blue" value="empty"><span class="mode-icon">○</span><span class="mode-text">Vacío</span></label>
+    </div>
+    </div>
+    <div class="choice setup-native-player" data-team="green">
+      <input id="realm-green" class="realm-check" type="checkbox" value="green" checked>
+      <span class="setup-team-name setup-sr-only">Brunia</span>
+      <input class="player-name" data-team="green" type="text" maxlength="24" value="" placeholder="Nombre del jugador 3" aria-label="Nombre del jugador de Brunia">
+      <select class="player-mode" data-team="green" aria-label="Control de Brunia">
+        <option value="human" selected>Persona</option><option value="bot">Bot básico</option><option value="strategic">Bot avanzado</option><option value="empty">Vacío</option>
+      </select>
+<div class="setup-mode-group" data-team="green" role="radiogroup" aria-label="Control del jugador de Brunia">
+      <label class="setup-mode-hit"><input type="radio" name="mode-green" data-team="green" value="human"><span class="mode-icon">♙</span><span class="mode-text">Persona</span></label>
+      <label class="setup-mode-hit"><input type="radio" name="mode-green" data-team="green" value="bot"><span class="mode-icon">🤖</span><span class="mode-text">Bot básico</span></label>
+      <label class="setup-mode-hit"><input type="radio" name="mode-green" data-team="green" value="strategic"><span class="mode-icon">⚙</span><span class="mode-text">Bot avanzado</span></label>
+      <label class="setup-mode-hit"><input type="radio" name="mode-green" data-team="green" value="empty"><span class="mode-icon">○</span><span class="mode-text">Vacío</span></label>
+    </div>
+    </div>
+    <div class="choice setup-native-player" data-team="yellow">
+      <input id="realm-yellow" class="realm-check" type="checkbox" value="yellow">
+      <span class="setup-team-name setup-sr-only">Routa</span>
+      <input class="player-name" data-team="yellow" type="text" maxlength="24" value="" placeholder="Nombre del jugador 4" aria-label="Nombre del jugador de Routa">
+      <select class="player-mode" data-team="yellow" aria-label="Control de Routa">
+        <option value="human" selected>Persona</option><option value="bot">Bot básico</option><option value="strategic">Bot avanzado</option><option value="empty">Vacío</option>
+      </select>
+<div class="setup-mode-group" data-team="yellow" role="radiogroup" aria-label="Control del jugador de Routa">
+      <label class="setup-mode-hit"><input type="radio" name="mode-yellow" data-team="yellow" value="human"><span class="mode-icon">♙</span><span class="mode-text">Persona</span></label>
+      <label class="setup-mode-hit"><input type="radio" name="mode-yellow" data-team="yellow" value="bot"><span class="mode-icon">🤖</span><span class="mode-text">Bot básico</span></label>
+      <label class="setup-mode-hit"><input type="radio" name="mode-yellow" data-team="yellow" value="strategic"><span class="mode-icon">⚙</span><span class="mode-text">Bot avanzado</span></label>
+      <label class="setup-mode-hit"><input type="radio" name="mode-yellow" data-team="yellow" value="empty"><span class="mode-icon">○</span><span class="mode-text">Vacío</span></label>
+    </div>
+    </div>
+
+    <label for="realm-red" class="realm-hit realm-gongonia" aria-label="Seleccionar Gongonia"></label>
+    <label for="realm-blue" class="realm-hit realm-kelta" aria-label="Seleccionar Kelta"></label>
+    <label for="realm-green" class="realm-hit realm-brunia" aria-label="Seleccionar Brunia"></label>
+    <label for="realm-yellow" class="realm-hit realm-routa" aria-label="Seleccionar Routa"></label>
+
+    
+    
+    
+    
+
+    <span id="count" class="setup-sr-only" aria-live="polite">2 reinos seleccionados</span>
+    <button id="start" class="setup-start" type="button" aria-label="Comenzar los Juegos">Comenzar los Juegos</button>
+  </div>
+</section>
+<section id="drawScreen" class="draw-screen hidden" aria-label="Sorteo de salida">
+  <div class="draw-panel">
+    <div class="draw-topline">
+      <span>LOS JUEGOS DE GONGONIA</span>
+      <button id="drawBack" type="button" class="draw-back">← Volver</button>
+    </div>
+    <div class="draw-emblem">✦</div>
+    <h2>EL SORTEO DE SALIDA</h2>
+    <p id="drawRoundTitle" class="draw-round-title">Todos los reinos participantes lanzan un dado.</p>
+    <div id="drawCurrent" class="draw-current" aria-live="polite"></div>
+    <div id="drawDie" class="draw-die" aria-label="Dado del sorteo">
+      <svg class="draw-die-vector" viewBox="0 0 100 100" role="img" aria-label="Dado tridimensional de marfil y oro con puntos rojo rubí"><defs>
+ <linearGradient id="draw-die-top" x1="0" y1="0" x2="1" y2="1">
+  <stop offset="0" stop-color="#fff7df"/>
+  <stop offset=".46" stop-color="#f2dfb8"/>
+  <stop offset="1" stop-color="#d9bd89"/>
+ </linearGradient>
+ <linearGradient id="draw-die-left" x1="0" y1="0" x2=".2" y2="1">
+  <stop offset="0" stop-color="#e9d3a6"/>
+  <stop offset=".55" stop-color="#d3b47d"/>
+  <stop offset="1" stop-color="#a9824d"/>
+ </linearGradient>
+ <linearGradient id="draw-die-right" x1="1" y1="0" x2=".25" y2="1">
+  <stop offset="0" stop-color="#fff0cf"/>
+  <stop offset=".5" stop-color="#e6cc9a"/>
+  <stop offset="1" stop-color="#bd9862"/>
+ </linearGradient>
+ <linearGradient id="draw-die-gold" x1="0" y1="0" x2="1" y2="1">
+  <stop offset="0" stop-color="#fff0ad"/>
+  <stop offset=".28" stop-color="#e8b94e"/>
+  <stop offset=".62" stop-color="#9e641d"/>
+  <stop offset="1" stop-color="#f7d77e"/>
+ </linearGradient>
+ <linearGradient id="draw-die-goldLight" x1="0" y1="0" x2="0" y2="1">
+  <stop stop-color="#fff2bc"/><stop offset="1" stop-color="#b77a29"/>
+ </linearGradient>
+ <filter id="draw-die-shadow" x="-20%" y="-20%" width="140%" height="150%">
+  <feDropShadow dx="0" dy="2.2" stdDeviation="1.8" flood-color="#000" flood-opacity=".34"/>
+ </filter>
+<linearGradient id="draw-die-ruby" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ad2430"/><stop offset=".48" stop-color="#82131f"/><stop offset="1" stop-color="#4d0c15"/></linearGradient></defs><g filter="url(#draw-die-shadow)">
+ <!-- Caras laterales -->
+ <path d="M4.5 24.2 L47.2 46.1 Q50 47.5 50 51.1 V91.2 Q50 98 44.4 95.1 L8.1 76.2 Q3 73.5 3 68.2 V29.1 Q3 25.8 4.5 24.2Z"
+       fill="url(#draw-die-left)" stroke="url(#draw-die-gold)" stroke-width="2.3" stroke-linejoin="round"/>
+ <path d="M95.5 24.2 L52.8 46.1 Q50 47.5 50 51.1 V91.2 Q50 98 55.6 95.1 L91.9 76.2 Q97 73.5 97 68.2 V29.1 Q97 25.8 95.5 24.2Z"
+       fill="url(#draw-die-right)" stroke="url(#draw-die-gold)" stroke-width="2.3" stroke-linejoin="round"/>
+ <!-- Cara superior -->
+ <path d="M50 3.2 Q52.2 3.2 55 4.6 L93.9 21.1 Q98 22.9 94.1 26.4 L53.1 46.8 Q50 48.4 46.9 46.8 L5.9 26.4 Q2 22.9 6.1 21.1 L45 4.6 Q47.8 3.2 50 3.2Z"
+       fill="#fff9eb" stroke="url(#draw-die-gold)" stroke-width="2.5" stroke-linejoin="round"/>
+ <!-- Biseles interiores -->
+ <path d="M50 7.1 L89.3 23.1 L50 42.7 L10.7 23.1Z" fill="none" stroke="#fff1c8" stroke-opacity=".78" stroke-width=".7"/>
+ <path d="M7.2 29 L46.8 49.1 V90.8 L7.2 70.2Z" fill="none" stroke="#f8e2b1" stroke-opacity=".48" stroke-width=".65"/>
+ <path d="M92.8 29 L53.2 49.1 V90.8 L92.8 70.2Z" fill="none" stroke="#fff0cb" stroke-opacity=".56" stroke-width=".65"/>
+ <!-- Aristas principales doradas -->
+ <path d="M5.8 25.1 L47 46.8 Q50 48.5 53 46.8 L94.2 25.1" fill="none" stroke="#fff0ad" stroke-width=".85" stroke-opacity=".9"/>
+ <path d="M50 48.2 V94.8" fill="none" stroke="#91601f" stroke-width="1.2" stroke-opacity=".65"/>
+ <path d="M50 48.2 V94.8" fill="none" stroke="#ffe7a0" stroke-width=".55" stroke-opacity=".8"/>
+ <!-- Ornamentos de filigrana en las esquinas -->
+ <g fill="none" stroke="url(#draw-die-goldLight)" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" opacity=".92">
+  <path d="M50 6.5 Q47.5 10.5 43.8 10.3 Q45.7 14.3 50 15.1 Q54.3 14.3 56.2 10.3 Q52.5 10.5 50 6.5Z"/>
+  <path d="M12.1 24.1 Q16.2 22.3 18.6 25.6 Q19.3 28.5 15.8 29.5 Q14.2 27.4 12.1 24.1Z"/>
+  <path d="M87.9 24.1 Q83.8 22.3 81.4 25.6 Q80.7 28.5 84.2 29.5 Q85.8 27.4 87.9 24.1Z"/>
+  <path d="M7 69 Q12 66 15.4 70.4 Q16.4 74.5 11.8 75.2"/>
+  <path d="M93 69 Q88 66 84.6 70.4 Q83.6 74.5 88.2 75.2"/>
+  <path d="M45.8 91.8 Q47.2 88.8 50 88 Q52.8 88.8 54.2 91.8"/>
+ </g>
+ <g fill="url(#draw-die-gold)" stroke="#80511d" stroke-width=".35">
+  <circle cx="50" cy="12.3" r="1.15"/>
+  <circle cx="12.5" cy="25.2" r=".85"/><circle cx="87.5" cy="25.2" r=".85"/>
+  <circle cx="8" cy="69.5" r=".8"/><circle cx="92" cy="69.5" r=".8"/>
+  <circle cx="50" cy="93.5" r="1"/>
+ </g>
+ <!-- Reflejos de esmalte -->
+ <path d="M13 19.7 L43.3 7.1" stroke="#fff" stroke-opacity=".43" stroke-width="1" stroke-linecap="round"/>
+ <path d="M8 33 Q8 30 10 29" stroke="#fff8df" stroke-opacity=".38" stroke-width=".9" fill="none"/>
+ <path d="M92 33 Q92 30 90 29" stroke="#fff" stroke-opacity=".35" stroke-width=".9" fill="none"/>
+</g><g id="draw-die-pip-group"></g></svg>
+    </div>
+    <p id="drawInstruction" class="draw-instruction">Cada reino participante tendrá su lanzamiento.</p>
+    <div id="drawResults" class="draw-results"></div>
+    <button id="drawRoll" type="button" class="draw-action">LANZAR DADO</button>
+    <button id="drawContinue" type="button" class="draw-action hidden">COMENZAR PARTIDA</button>
+  </div>
+</section>
+<section id="game" class="hidden"><div class="layout"><div class="panel"><div id="board" class="board" aria-label="Tablero de prueba"><div id="goalFireworks" class="goal-fireworks hidden" aria-hidden="true"></div></div></div><aside class="panel side">
+<div class="dice dice-interaction">
+ <div id="die" class="die" role="button" tabindex="0" aria-label="Tocar para lanzar el dado" aria-disabled="false"><svg class="die-art" viewBox="0 0 100 100" role="img" aria-label="Dado tridimensional de marfil y oro con puntos rojo rubí"><defs>
+ <linearGradient id="game-die-top" x1="0" y1="0" x2="1" y2="1">
+  <stop offset="0" stop-color="#fffdf5"/>
+  <stop offset=".46" stop-color="#fff3d8"/>
+  <stop offset="1" stop-color="#ead5aa"/>
+ </linearGradient>
+ <linearGradient id="game-die-left" x1="0" y1="0" x2=".2" y2="1">
+  <stop offset="0" stop-color="#fff0d0"/>
+  <stop offset=".55" stop-color="#ead4a8"/>
+  <stop offset="1" stop-color="#c9a66e"/>
+ </linearGradient>
+ <linearGradient id="game-die-right" x1="1" y1="0" x2=".25" y2="1">
+  <stop offset="0" stop-color="#fff8e5"/>
+  <stop offset=".5" stop-color="#f0ddb8"/>
+  <stop offset="1" stop-color="#d2b17e"/>
+ </linearGradient>
+ <linearGradient id="game-die-gold" x1="0" y1="0" x2="1" y2="1">
+  <stop offset="0" stop-color="#fff0ad"/>
+  <stop offset=".28" stop-color="#e8b94e"/>
+  <stop offset=".62" stop-color="#9e641d"/>
+  <stop offset="1" stop-color="#f7d77e"/>
+ </linearGradient>
+ <linearGradient id="game-die-goldLight" x1="0" y1="0" x2="0" y2="1">
+  <stop stop-color="#fff2bc"/><stop offset="1" stop-color="#b77a29"/>
+ </linearGradient>
+ <filter id="game-die-shadow" x="-20%" y="-20%" width="140%" height="150%">
+  <feDropShadow dx="0" dy="2.2" stdDeviation="1.8" flood-color="#000" flood-opacity=".34"/>
+ </filter>
+<linearGradient id="game-die-ruby" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ad2430"/><stop offset=".48" stop-color="#82131f"/><stop offset="1" stop-color="#4d0c15"/></linearGradient></defs><g filter="url(#game-die-shadow)">
+ <!-- Caras laterales -->
+ <path d="M4.5 24.2 L47.2 46.1 Q50 47.5 50 51.1 V91.2 Q50 98 44.4 95.1 L8.1 76.2 Q3 73.5 3 68.2 V29.1 Q3 25.8 4.5 24.2Z"
+       fill="url(#game-die-left)" stroke="url(#game-die-gold)" stroke-width="2.3" stroke-linejoin="round"/>
+ <path d="M95.5 24.2 L52.8 46.1 Q50 47.5 50 51.1 V91.2 Q50 98 55.6 95.1 L91.9 76.2 Q97 73.5 97 68.2 V29.1 Q97 25.8 95.5 24.2Z"
+       fill="url(#game-die-right)" stroke="url(#game-die-gold)" stroke-width="2.3" stroke-linejoin="round"/>
+ <!-- Cara superior -->
+ <path d="M50 3.2 Q52.2 3.2 55 4.6 L93.9 21.1 Q98 22.9 94.1 26.4 L53.1 46.8 Q50 48.4 46.9 46.8 L5.9 26.4 Q2 22.9 6.1 21.1 L45 4.6 Q47.8 3.2 50 3.2Z"
+       fill="#fff9eb" stroke="url(#game-die-gold)" stroke-width="2.5" stroke-linejoin="round"/>
+ <!-- Biseles interiores -->
+ <path d="M50 7.1 L89.3 23.1 L50 42.7 L10.7 23.1Z" fill="none" stroke="#fff1c8" stroke-opacity=".78" stroke-width=".7"/>
+ <path d="M7.2 29 L46.8 49.1 V90.8 L7.2 70.2Z" fill="none" stroke="#f8e2b1" stroke-opacity=".48" stroke-width=".65"/>
+ <path d="M92.8 29 L53.2 49.1 V90.8 L92.8 70.2Z" fill="none" stroke="#fff0cb" stroke-opacity=".56" stroke-width=".65"/>
+ <!-- Aristas principales doradas -->
+ <path d="M5.8 25.1 L47 46.8 Q50 48.5 53 46.8 L94.2 25.1" fill="none" stroke="#fff0ad" stroke-width=".85" stroke-opacity=".9"/>
+ <path d="M50 48.2 V94.8" fill="none" stroke="#91601f" stroke-width="1.2" stroke-opacity=".65"/>
+ <path d="M50 48.2 V94.8" fill="none" stroke="#ffe7a0" stroke-width=".55" stroke-opacity=".8"/>
+ <!-- Ornamentos de filigrana en las esquinas -->
+ <g fill="none" stroke="url(#game-die-goldLight)" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" opacity=".92">
+  <path d="M50 6.5 Q47.5 10.5 43.8 10.3 Q45.7 14.3 50 15.1 Q54.3 14.3 56.2 10.3 Q52.5 10.5 50 6.5Z"/>
+  <path d="M12.1 24.1 Q16.2 22.3 18.6 25.6 Q19.3 28.5 15.8 29.5 Q14.2 27.4 12.1 24.1Z"/>
+  <path d="M87.9 24.1 Q83.8 22.3 81.4 25.6 Q80.7 28.5 84.2 29.5 Q85.8 27.4 87.9 24.1Z"/>
+  <path d="M7 69 Q12 66 15.4 70.4 Q16.4 74.5 11.8 75.2"/>
+  <path d="M93 69 Q88 66 84.6 70.4 Q83.6 74.5 88.2 75.2"/>
+  <path d="M45.8 91.8 Q47.2 88.8 50 88 Q52.8 88.8 54.2 91.8"/>
+ </g>
+ <g fill="url(#game-die-gold)" stroke="#80511d" stroke-width=".35">
+  <circle cx="50" cy="12.3" r="1.15"/>
+  <circle cx="12.5" cy="25.2" r=".85"/><circle cx="87.5" cy="25.2" r=".85"/>
+  <circle cx="8" cy="69.5" r=".8"/><circle cx="92" cy="69.5" r=".8"/>
+  <circle cx="50" cy="93.5" r="1"/>
+ </g>
+ <!-- Reflejos de esmalte -->
+ <path d="M13 19.7 L43.3 7.1" stroke="#fff" stroke-opacity=".43" stroke-width="1" stroke-linecap="round"/>
+ <path d="M8 33 Q8 30 10 29" stroke="#fff8df" stroke-opacity=".38" stroke-width=".9" fill="none"/>
+ <path d="M92 33 Q92 30 90 29" stroke="#fff" stroke-opacity=".35" stroke-width=".9" fill="none"/>
+</g><g id="die-pip-group"></g></svg><span id="die-result" class="die-result hidden" aria-hidden="true">—</span></div>
+ <div class="dice-turn-wrap"><div class="label">JUGADOR ACTUAL</div><div id="turn" class="turn die-turn"></div></div>
+ <button id="roll" class="primary" type="button">Lanzar dado</button>
+</div>
+<div id="status" class="status wide">Lanza el dado para comenzar.</div><div class="wide"><div class="label">Jugadores</div><div id="players" class="players"></div></div>
+<div class="wide"><button id="back" class="secondary">Menú</button> <button id="restart" class="secondary">Reiniciar</button> <button id="gameMusicToggle" class="secondary" type="button">🔇 Activar música</button> <button id="gameEffectsToggle" class="secondary" type="button">🔊 Efectos activados</button></div>
+</aside></div><p class="note">Durante la partida puedes activar o desactivar la música y los efectos de sonido por separado.</p></section>
+<section id="results" class="panel hidden" aria-live="polite">
+ <h2 style="font:1.7rem Georgia,serif;color:#f4d99b;text-align:center;margin:4px 0 8px">🏆 Crónicas de la partida</h2>
+ <p id="resultWinner" style="text-align:center;font:1.25rem Georgia,serif;margin:8px 0"></p>
+ <p id="resultDuration" class="sub"></p>
+ <div id="resultStats"></div>
+ <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px">
+  <button id="newGame" class="primary">Nueva partida</button>
+  <button id="resultMenu" class="secondary">Volver al menú</button>
+ </div>
+</section>
+</main>
+
+<div id="victoryOverlay" class="victory-overlay hidden" aria-hidden="true" aria-live="polite">
+ <div id="victoryConfetti" class="victory-confetti" aria-hidden="true"></div>
+ <div class="victory-card" role="status">
+  <div id="victoryCrest" class="victory-crest">🏆</div>
+  <div class="victory-kicker">LOS JUEGOS DE GONGONIA</div>
+  <h2 class="victory-title">¡VICTORIA!</h2>
+  <div id="victoryKingdom" class="victory-kingdom">GONGONIA</div>
+  <p id="victoryPlayer" class="victory-player"></p>
+ </div>
+</div>
+
+<audio id="introMusic" src="The%20Kelta%20Mountains.mp3" preload="none" loop></audio>
+<audio id="gameMusic" src="The%20Routa%20Plains%20of%20A%CC%81nganor%20(Take%202).mp3" preload="none" loop></audio>
+<audio id="victoryTrumpets" src="https://sfxmint.com/dl/trumpet-fanfare-04.mp3" preload="auto"></audio>
+<audio id="victoryCrowd" src="https://sfxmint.com/dl/crowd-cheer-44.mp3" preload="auto"></audio>
+<script>
+(()=>{
+const T={
+ red:{name:'Rojo',color:'#c44b50',icon:'🦁',start:0,home:[[0,0],[0,1],[1,0],[1,1]]},
+ green:{name:'Verde',color:'#32815c',icon:'🦌',start:13,home:[[0,9],[0,10],[1,9],[1,10]]},
+ yellow:{name:'Amarillo',color:'#e0b83c',icon:'☀️',start:26,home:[[9,9],[9,10],[10,9],[10,10]]},
+ blue:{name:'Azul',color:'#427cbd',icon:'🦅',start:39,home:[[9,0],[9,1],[10,0],[10,1]]}
+};
+const ORDER=['red','green','yellow','blue'];
+const IMAGE_SIZE=1254;
+const pct=(x,y)=>[+(x/IMAGE_SIZE*100).toFixed(3),+(y/IMAGE_SIZE*100).toFixed(3)];
+/* 52 casillas comunes, en el orden del recorrido, tomadas de los puntos negros del tablero. */
+const ROUTE_PIXELS=[
+ [172.9,471.5],
+ [245.6,473.9],
+ [317.8,473.5],
+ [393.9,474.2],
+ [473.9,473.6],
+ [560,390.7],
+ [557.8,327.3],
+ [560.2,263.8],
+ [560.1,196.7],
+ [557.7,135],
+ [557.6,72.9],
+ [631,70.5],
+ [700.3,70.5],
+ [703.2,134.6],
+ [701.3,201.4],
+ [701.4,264.6],
+ [703.8,325.9],
+ [702.4,389.3],
+ [783.7,472.1],
+ [864.1,474.8],
+ [937.6,473.7],
+ [1014.4,472.6],
+ [1089.2,474.6],
+ [1165.9,472.2],
+ [1165.3,549.2],
+ [1164.2,625.1],
+ [1091.9,624.6],
+ [1011.1,628.4],
+ [936.2,626.2],
+ [861.8,627],
+ [787.3,627.3],
+ [701,711.9],
+ [703.2,780.8],
+ [698.2,848.1],
+ [702.4,920.6],
+ [701.7,991.1],
+ [701.2,1063.1],
+ [631,1059.5],
+ [557.9,1061.6],
+ [559.2,987.9],
+ [559,917.9],
+ [559.4,846.4],
+ [559.4,781],
+ [557.1,709.4],
+ [473.4,624.7],
+ [392.1,624.7],
+ [321.9,627.3],
+ [247.1,625.5],
+ [170.3,625.4],
+ [94.8,625.4],
+ [97.5,549],
+ [94.1,472.2]
+];
+const ROUTE=ROUTE_PIXELS.map(([x,y])=>pct(x,y));
+/* Las cuatro estrellas doradas de salida y las cuatro estrellas blancas son seguras. */
+const SAFE=new Set([0,8,13,21,26,34,39,47]);
+/* Cada carril tiene cinco casillas coloreadas; el paso siguiente es la meta central. */
+const LANES={
+ red:[[170.1,550.7],[244.3,546.9],[319.6,545.6],[394.4,547.6],[473.2,550.3]].map(([x,y])=>pct(x,y)),
+ green:[[630,134.4],[628,201.7],[627.7,262.8],[629.6,327.6],[629.7,391.3]].map(([x,y])=>pct(x,y)),
+ yellow:[[1091.6,551.2],[1015.8,549.7],[937,548.5],[862.8,548.6],[785.2,547.4]].map(([x,y])=>pct(x,y)),
+ blue:[[629.1,989.7],[628.6,919.3],[629.2,848.5],[630.8,781.9],[631.8,710.4]].map(([x,y])=>pct(x,y))
+};
+const TOKEN_IMAGES={
+ red:'ficha-reino-rojo.webp',
+ green:'ficha-reino-verde.webp',
+ yellow:'ficha-reino-amarillo.webp',
+ blue:'ficha-reino-azul.webp'
+};
+const HOME_POINTS={
+ red:[[17.169,14.938],[28.999,14.968],[17.147,25.8],[28.971,25.699]],
+ green:[[71.907,15.012],[83.784,15.042],[71.923,25.707],[83.738,25.616]],
+ yellow:[[71.81,66.119],[83.737,66.05],[71.875,77.406],[83.806,77.516]],
+ blue:[[16.799,66.077],[28.761,66.137],[16.707,77.463],[28.644,77.334]]
+};
+const GOAL=pct(627,544), $=id=>document.getElementById(id);
+let players=[],current=0,roll=null,waiting=false,over=false,idseq=0,musicEnabled=true,effectsEnabled=true,botTimer=null,animating=false,animatingPieceId=null,stompingPieceId=null,stompedPieceIds=new Set(),audioContext=null,capturedPieceIds=new Set(),goalFireworksTimer=null,gameStartedAt=0,gameStats={},finishOrder=[],drawState=null,lastStartingTeam=null,matchStatsRecorded=false,victoryQueue=[],victoryTimer=null,victoryCheerTimer=null,victoryActive=false;
+updateDieFace(1);
+const introMusic=$('introMusic'),gameMusic=$('gameMusic');
+/* Volumen maestro: 33 %, 66 % o 100 % de la mezcla original. */
+let musicVolume=0.66;
+function applyMusicVolume(){
+ introMusic.volume=0.56*musicVolume;
+ gameMusic.volume=0.48*musicVolume;
+ const levels=[0.33,0.66,1];
+ document.querySelectorAll('.home-volume-fill').forEach((bar,index)=>{
+  bar.classList.toggle('is-active',musicEnabled&&musicVolume>=levels[index]-0.001);
+ });
+ const hit=$('homeVolumeHitArea');
+ if(hit){
+  const state=musicEnabled?Math.round(musicVolume*100):0;
+  hit.setAttribute('aria-label','Volumen actual: '+state+' por ciento. Toca la primera, segunda o tercera barra para elegir 33, 66 o 100 por ciento. Repite el nivel activo para silenciar.');
+ }
+}
+introMusic.volume=0.56;gameMusic.volume=0.48;
+function updateMusicButtons(){
+ const label=musicError?'⚠️ Reintentar música':musicEnabled?'🔊 Silenciar música':'🔇 Activar música';
+ $('musicToggle').textContent=label;
+ $('gameMusicToggle').textContent=label;
+ $('musicToggle').title=musicError||'Música de inicio';
+ $('gameMusicToggle').title=musicError||'Música de la partida';
+ $('musicStatus').textContent=musicError;
+ $('homeVolumeHitArea').setAttribute('aria-label',musicError?'No se pudo iniciar la música. Toca una barra para reintentar.':'Volumen actual: '+(musicEnabled?Math.round(musicVolume*100):0)+' por ciento. Toca una barra para cambiar el nivel; repite el nivel activo para silenciar.');
+ applyMusicVolume();
+}
+let musicError='';
+async function playMusicFor(screen){
+ if(!musicEnabled)return false;
+ const target=screen==='game'?gameMusic:introMusic;
+ const other=screen==='game'?introMusic:gameMusic;
+ other.pause();other.currentTime=0;
+ try{
+  target.muted=false;
+  target.volume=(screen==='game'?0.48:0.56)*musicVolume;
+  await target.play();
+  musicError='';
+  updateMusicButtons();
+  return true;
+ }catch(e){
+  musicEnabled=false;
+  musicError='No se pudo iniciar el audio. Toca para reintentar.';
+  updateMusicButtons();
+  return false;
+ }
+}
+async function enableMusic(){
+ if(musicEnabled){
+  musicEnabled=false;musicError='';
+  introMusic.pause();gameMusic.pause();
+  updateMusicButtons();
+  return;
+ }
+ musicEnabled=true;musicError='';
+ updateMusicButtons();
+ const screen=$('game').classList.contains('hidden')?'setup':'game';
+ await playMusicFor(screen);
+}
+$('musicToggle').addEventListener('click',enableMusic);
+$('gameMusicToggle').addEventListener('click',enableMusic);
+
+function updateEffectsButtons(){const label=effectsEnabled?'🔊 Efectos activados':'🔇 Efectos desactivados';$('effectsToggle').textContent=label;$('gameEffectsToggle').textContent=label;}
+function enableEffects(){effectsEnabled=!effectsEnabled;if(!effectsEnabled)stopVictoryAudio();updateEffectsButtons();}
+$('effectsToggle').addEventListener('click',enableEffects);
+$('gameEffectsToggle').addEventListener('click',enableEffects);
+updateMusicButtons();updateEffectsButtons();
+
+
+// La pantalla utiliza siempre la ilustración aprobada; no hay cambio de diseño al cargar.
+$('homeExactGngPlus').addEventListener('click',()=>showHomeInfo('Saldo GNG','En v0.10.1 el saldo se muestra como una imagen fija de 0 GNG. No está conectado a una cartera ni permite realizar operaciones.'));
+$('homeExactLanguageHeader').addEventListener('click',()=>{
+ const menu=$('homeLanguageMenu');
+ const opening=menu.hidden;
+ menu.hidden=!opening;
+ $('homeExactLanguageHeader').setAttribute('aria-expanded',String(opening));
+});
+document.querySelectorAll('.home-language-option').forEach(button=>button.addEventListener('click',()=>{
+ const label=button.dataset.label;
+ const lang=button.dataset.language;
+ const overlay=$('homeImageLanguageLabel');
+ overlay.textContent=label;
+ overlay.hidden=(lang==='es');
+ if(lang==='es')overlay.style.display='none';else overlay.style.display='flex';
+ overlay.setAttribute('aria-label','Idioma seleccionado: '+label+' (sin traducción en esta versión)');
+ $('homeLanguageMenu').hidden=true;
+ $('homeExactLanguageHeader').setAttribute('aria-expanded','false');
+}));
+$('homeExactPlay').addEventListener('click',()=>{$('homeScreen').classList.add('hidden');$('setup').classList.remove('hidden');playMusicFor('setup');});
+$('setupBack').addEventListener('click',()=>{$('setup').classList.add('hidden');$('homeScreen').classList.remove('hidden');playMusicFor('setup');window.scrollTo(0,0);});
+$('homeExactPurchases').addEventListener('click',()=>showHomeInfo('Compras','El acceso queda preparado visualmente. La tienda se implementará en una versión posterior.'));
+$('homeExactStats').addEventListener('click',openHomeStats);
+$('homeExactSettings').addEventListener('click',()=>showHomeInfo('Ajustes','El selector de idioma permite elegir entre cinco opciones, pero v0.10.1 todavía no traduce los textos. Los demás ajustes se incorporarán por etapas.'));
+
+function enableHomeMusic(){enableMusic();}
+let homeMusicStartedByGesture=false;
+/* En iPadOS el sonido se habilita en el primer toque del usuario. */
+document.addEventListener('pointerdown',e=>{
+ if(homeMusicStartedByGesture||!musicEnabled||$('homeScreen').classList.contains('hidden'))return;
+ if(e.target.closest('#homeVolumeHitArea'))return;
+ homeMusicStartedByGesture=true;
+ playMusicFor('setup');
+},{passive:true});
+/* Un solo toque recorre el volumen en una secuencia continua:
+   66 -> silencio -> 33 -> 66 -> 100 -> 66 -> 33 -> silencio -> ... */
+const homeVolumeSequence=[0.66,0,0.33,0.66,1,0.66,0.33,0];
+let homeVolumeSequenceIndex=0;
+$('homeVolumeHitArea').addEventListener('click',()=>{
+ homeMusicStartedByGesture=true;
+ homeVolumeSequenceIndex=homeVolumeSequenceIndex===7?2:homeVolumeSequenceIndex+1;
+ setHomeMusicVolume(homeVolumeSequence[homeVolumeSequenceIndex]);
+});
+function setHomeMusicVolume(level){
+ musicError='';
+ if(level===0){
+  musicEnabled=false;
+  introMusic.pause();gameMusic.pause();
+  updateMusicButtons();
+  return;
+ }
+ musicVolume=level;musicEnabled=true;
+ updateMusicButtons();
+ const screen=$('game').classList.contains('hidden')?'setup':'game';
+ const active=screen==='game'?gameMusic:introMusic;
+ if(!active.paused)active.volume=(screen==='game'?0.48:0.56)*musicVolume;
+ else playMusicFor(screen);
+}
+
+
+function showHomeInfo(title,body){$('homeInfoTitle').textContent=title;$('homeInfoText').textContent=body;$('homeInfoModal').classList.remove('hidden');$('homeModalOk').focus();}
+function closeHomeInfo(){$('homeInfoModal').classList.add('hidden');}
+
+const LOCAL_STATS_KEY='ludoGongoniaLocalStatsV1';
+function emptyLocalStats(){
+ return {gamesPlayed:0,totalSeconds:0,totalPlayers:0,wins:{red:0,green:0,yellow:0,blue:0}};
+}
+function readLocalStats(){
+ const clean=emptyLocalStats();
+ try{
+  const raw=localStorage.getItem(LOCAL_STATS_KEY);
+  if(!raw)return clean;
+  const saved=JSON.parse(raw);
+  clean.gamesPlayed=Math.max(0,Number(saved.gamesPlayed)||0);
+  clean.totalSeconds=Math.max(0,Number(saved.totalSeconds)||0);
+  clean.totalPlayers=Math.max(0,Number(saved.totalPlayers)||0);
+  ORDER.forEach(team=>clean.wins[team]=Math.max(0,Number(saved.wins&&saved.wins[team])||0));
+ }catch(e){}
+ return clean;
+}
+function saveCompletedMatch(winnerTeam,durationSeconds){
+ if(matchStatsRecorded)return;
+ matchStatsRecorded=true;
+ const stats=readLocalStats();
+ stats.gamesPlayed+=1;
+ stats.totalSeconds+=Math.max(0,Math.floor(durationSeconds));
+ stats.totalPlayers+=players.length;
+ if(Object.prototype.hasOwnProperty.call(stats.wins,winnerTeam))stats.wins[winnerTeam]+=1;
+ try{localStorage.setItem(LOCAL_STATS_KEY,JSON.stringify(stats));}catch(e){}
+}
+function formatTotalPlayTime(seconds){
+ const hours=Math.floor(seconds/3600),minutes=Math.floor((seconds%3600)/60);
+ return hours>0?hours+' h '+minutes+' min':minutes+' min';
+}
+function openHomeStats(){
+ const stats=readLocalStats();
+ $('homeStatGames').textContent=String(stats.gamesPlayed);
+ $('homeStatTime').textContent=formatTotalPlayTime(stats.totalSeconds);
+ $('homeStatPlayers').textContent=stats.gamesPlayed>0?(stats.totalPlayers/stats.gamesPlayed).toFixed(1).replace('.',','):'—';
+ const maxWins=Math.max(...ORDER.map(team=>stats.wins[team]));
+ if(stats.gamesPlayed===0||maxWins===0){
+  $('homeStatRealm').textContent='Sin datos';
+ }else{
+  const leaders=ORDER.filter(team=>stats.wins[team]===maxWins);
+  $('homeStatRealm').textContent=leaders.length===1?T[leaders[0]].icon+' '+T[leaders[0]].name:'Empate: '+leaders.map(team=>T[team].name).join(' / ');
+ }
+ $('homeStatsModal').classList.remove('hidden');
+ $('homeStatsClose').focus();
+}
+function closeHomeStats(){$('homeStatsModal').classList.add('hidden');}
+
+function openStoryScreen(){
+ $('homeInfoModal').classList.add('hidden');
+ $('homeScreen').classList.add('hidden');
+ $('setup').classList.add('hidden');
+ $('game').classList.add('hidden');
+ $('results').classList.add('hidden');
+ $('storyScreen').classList.remove('hidden');
+ window.scrollTo(0,0);
+}
+function closeStoryScreen(){
+ $('storyScreen').classList.add('hidden');
+ $('homeScreen').classList.remove('hidden');
+ window.scrollTo(0,0);
+}
+$('homeExactStory').addEventListener('click',openStoryScreen);
+$('storyBackTop').addEventListener('click',closeStoryScreen);
+$('storyBackBottom').addEventListener('click',closeStoryScreen);
+$('storyArtwork').addEventListener('error',()=>{$('storyArtwork').hidden=true;});
+$('homeModalClose').addEventListener('click',closeHomeInfo);
+$('homeModalOk').addEventListener('click',closeHomeInfo);
+$('homeInfoModal').addEventListener('click',e=>{if(e.target===$('homeInfoModal'))closeHomeInfo();});
+$('homeStatsClose').addEventListener('click',closeHomeStats);
+$('homeStatsModal').addEventListener('click',e=>{if(e.target===$('homeStatsModal'))closeHomeStats();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('homeStatsModal').classList.contains('hidden'))closeHomeStats();});
+/* Se eliminaron los antiguos manejadores del menú CSS; la pantalla usa los botones transparentes sobre la ilustración. */
+
+/* Efectos sonoros generados por el propio navegador: no requieren archivos adicionales. */
+let noiseBuffer=null;
+function getAudioContext(){
+ const AudioCtx=window.AudioContext||window.webkitAudioContext;
+ if(!AudioCtx)return null;
+ try{
+  if(!audioContext)audioContext=new AudioCtx();
+  if(audioContext.state==='suspended')audioContext.resume().catch(()=>{});
+  if(!noiseBuffer&&audioContext){
+   const length=Math.ceil(audioContext.sampleRate*1.2);
+   noiseBuffer=audioContext.createBuffer(1,length,audioContext.sampleRate);
+   const data=noiseBuffer.getChannelData(0);
+   for(let i=0;i<length;i++)data[i]=Math.random()*2-1;
+  }
+  return audioContext;
+ }catch(e){return null;}
+}
+/* Sonido breve de fantasía al comenzar el turno de cada reino. */
+function playTurnSound(){
+ if(!effectsEnabled)return;
+ const ctx=getAudioContext();if(!ctx)return;
+ const now=ctx.currentTime;
+ [[659.25,0],[783.99,.12],[987.77,.24]].forEach(([frequency,delay])=>{
+  const osc=ctx.createOscillator(),gain=ctx.createGain();
+  osc.type='sine';osc.frequency.setValueAtTime(frequency,now+delay);
+  gain.gain.setValueAtTime(.0001,now+delay);
+  gain.gain.exponentialRampToValueAtTime(.10,now+delay+.025);
+  gain.gain.exponentialRampToValueAtTime(.0001,now+delay+.18);
+  osc.connect(gain);gain.connect(ctx.destination);
+  osc.start(now+delay);osc.stop(now+delay+.19);
+ });
+}
+/* Dados rodando: pequeños golpecitos irregulares y un traqueteo corto. */
+/* Dado convencional: 1↔6, 2↔5 y 3↔4.
+   Cada orientación muestra tres caras físicamente adyacentes; ninguna cara lateral se fija artificialmente. */
+function updateDieFace(value){
+ const group=$('die-pip-group');
+ if(!group)return;
+ const number=Number(value);
+ if(!Number.isInteger(number)||number<1||number>6){group.innerHTML='';return;}
+ const patterns={
+  1:[[.5,.5]],
+  2:[[.3,.3],[.7,.7]],
+  3:[[.3,.3],[.5,.5],[.7,.7]],
+  4:[[.3,.3],[.7,.3],[.3,.7],[.7,.7]],
+  5:[[.3,.3],[.7,.3],[.5,.5],[.3,.7],[.7,.7]],
+  6:[[.3,.22],[.7,.22],[.3,.5],[.7,.5],[.3,.78],[.7,.78]]
+ };
+ const directions={
+  px:[1,0,0],nx:[-1,0,0],
+  py:[0,1,0],ny:[0,-1,0],
+  pz:[0,0,1],nz:[0,0,-1]
+ };
+ const faceValues={px:3,nx:4,py:1,ny:6,pz:2,nz:5};
+ const keyForValue=Object.keys(faceValues).find(key=>faceValues[key]===number);
+ const topDir=directions[keyForValue];
+ const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+ const cross=(a,b)=>[
+  a[1]*b[2]-a[2]*b[1],
+  a[2]*b[0]-a[0]*b[2],
+  a[0]*b[1]-a[1]*b[0]
+ ];
+ const keyForDirection=vector=>Object.keys(directions).find(key=>
+  directions[key][0]===vector[0]&&directions[key][1]===vector[1]&&directions[key][2]===vector[2]
+ );
+ /* El resultado superior conserva seis probabilidades iguales; la orientación lateral es una de cuatro válidas. */
+ const sideOptions=Object.keys(directions).filter(key=>dot(directions[key],topDir)===0);
+ const rightKey=sideOptions[Math.floor(Math.random()*sideOptions.length)];
+ const leftKey=keyForDirection(cross(directions[rightKey],topDir));
+ const faceList=[
+  {name:'top',value:number},
+  {name:'left',value:faceValues[leftKey]},
+  {name:'right',value:faceValues[rightKey]}
+ ];
+ /* Proyección de cada cara: los puntos se transforman junto con el plano, no se dibujan como círculos frontales. */
+ const faceTransforms={
+  top:'matrix(39 17.8 -39 17.8 50 7.1)',
+  left:'matrix(39 22 0 42 8 28)',
+  right:'matrix(-39 22 0 42 92 28)'
+ };
+ const pipRadius=.105;
+ const dots=faceList.map(face=>{
+  const pips=patterns[face.value].map(([u,v])=>{
+   return '<g><ellipse cx="'+u+'" cy="'+v+'" rx="'+(pipRadius+.012)+'" ry="'+(pipRadius+.012)+'" fill="#4c1018" opacity=".9"/><ellipse cx="'+u+'" cy="'+v+'" rx="'+pipRadius+'" ry="'+pipRadius+'" fill="url(#die-gem-fill)" stroke="#5c0c15" stroke-width=".012"/><path d="M '+(u-pipRadius*.46)+' '+(v-pipRadius*.28)+' Q '+u+' '+(v-pipRadius*.55)+' '+(u+pipRadius*.28)+' '+(v-pipRadius*.3)+'" fill="none" stroke="#e7a2a0" stroke-width=".009" stroke-linecap="round" opacity=".6"/></g>';
+  }).join('');
+  return '<g class="die-face-pips die-face-'+face.name+'" transform="'+faceTransforms[face.name]+'">'+pips+'</g>';
+ }).join('');
+ group.innerHTML=dots;
+ const result=$('die-result');
+ if(result)result.textContent=String(number);
+}
+function playDiceSound(){
+ if(!effectsEnabled)return;
+ const ctx=getAudioContext();if(!ctx||!noiseBuffer)return;
+ const now=ctx.currentTime;
+ const rattle=[0,.055,.125,.205,.27,.365,.435,.49];
+ rattle.forEach((delay,index)=>{
+  const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+  source.buffer=noiseBuffer;
+  filter.type='bandpass';filter.frequency.value=950+Math.random()*1500;filter.Q.value=.7+Math.random()*1.4;
+  const volume=(.13+Math.random()*.12)*(1-index*.055);
+  gain.gain.setValueAtTime(.0001,now+delay);
+  gain.gain.exponentialRampToValueAtTime(volume,now+delay+.004);
+  gain.gain.exponentialRampToValueAtTime(.0001,now+delay+.045+Math.random()*.025);
+  source.connect(filter);filter.connect(gain);gain.connect(ctx.destination);
+  source.start(now+delay);source.stop(now+delay+.085);
+ });
+}
+/* Pisada corta y suave cada vez que una ficha avanza una casilla. */
+function playFootstep(){
+ if(!effectsEnabled)return;
+ const ctx=getAudioContext();if(!ctx||!noiseBuffer)return;
+ const now=ctx.currentTime;
+ const thump=ctx.createOscillator(),thumpGain=ctx.createGain();
+ thump.type='sine';thump.frequency.setValueAtTime(115,now);
+ thump.frequency.exponentialRampToValueAtTime(62,now+.085);
+ thumpGain.gain.setValueAtTime(.0001,now);
+ thumpGain.gain.exponentialRampToValueAtTime(.30,now+.008);
+ thumpGain.gain.exponentialRampToValueAtTime(.0001,now+.105);
+ thump.connect(thumpGain);thumpGain.connect(ctx.destination);
+ thump.start(now);thump.stop(now+.11);
+ const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+ source.buffer=noiseBuffer;filter.type='lowpass';filter.frequency.value=620;
+ gain.gain.setValueAtTime(.0001,now);
+ gain.gain.exponentialRampToValueAtTime(.12,now+.006);
+ gain.gain.exponentialRampToValueAtTime(.0001,now+.055);
+ source.connect(filter);filter.connect(gain);gain.connect(ctx.destination);
+ source.start(now);source.stop(now+.06);
+}
+/* Vítor muy corto y alegre cuando una ficha sale de la base. */
+function playPieceCheer(){
+ if(!effectsEnabled)return;
+ const ctx=getAudioContext();if(!ctx||!noiseBuffer)return;
+ const now=ctx.currentTime;
+ /* Tres voces sintéticas ascendentes y un pequeño murmullo filtrado. */
+ [[520,0,.21],[660,.035,.24],[790,.075,.20]].forEach(([frequency,delay,duration])=>{
+  const osc=ctx.createOscillator(),gain=ctx.createGain(),vibrato=ctx.createOscillator(),vibratoGain=ctx.createGain();
+  osc.type='sawtooth';
+  osc.frequency.setValueAtTime(frequency*.88,now+delay);
+  osc.frequency.exponentialRampToValueAtTime(frequency*1.18,now+delay+duration);
+  vibrato.type='sine';vibrato.frequency.value=13;vibratoGain.gain.value=frequency*.018;
+  vibrato.connect(vibratoGain);vibratoGain.connect(osc.frequency);
+  gain.gain.setValueAtTime(.0001,now+delay);
+  gain.gain.exponentialRampToValueAtTime(.085,now+delay+.025);
+  gain.gain.exponentialRampToValueAtTime(.0001,now+delay+duration);
+  osc.connect(gain);gain.connect(ctx.destination);
+  vibrato.start(now+delay);osc.start(now+delay);
+  vibrato.stop(now+delay+duration+.01);osc.stop(now+delay+duration+.01);
+ });
+ const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+ source.buffer=noiseBuffer;filter.type='bandpass';filter.frequency.value=1050;filter.Q.value=.65;
+ gain.gain.setValueAtTime(.0001,now);
+ gain.gain.exponentialRampToValueAtTime(.16,now+.035);
+ gain.gain.exponentialRampToValueAtTime(.0001,now+.29);
+ source.connect(filter);filter.connect(gain);gain.connect(ctx.destination);
+ source.start(now);source.stop(now+.31);
+}
+/* Golpe mágico breve al capturar: caída tonal, impacto grave y destello. */
+/* Cohetes ascendentes y estallidos brillantes al llegar a la meta. */
+function playFireworksSound(){
+ if(!effectsEnabled)return;
+ const ctx=getAudioContext();
+ if(!ctx||!noiseBuffer)return;
+ const now=ctx.currentTime;
+ const shots=[{delay:0,base:520},{delay:.19,base:650},{delay:.38,base:760}];
+ shots.forEach((shot,index)=>{
+  const start=now+shot.delay;
+  const whistle=ctx.createOscillator(),whistleGain=ctx.createGain();
+  whistle.type='sine';
+  whistle.frequency.setValueAtTime(shot.base,start);
+  whistle.frequency.exponentialRampToValueAtTime(shot.base*2.25,start+.20);
+  whistleGain.gain.setValueAtTime(.0001,start);
+  whistleGain.gain.exponentialRampToValueAtTime(.105,start+.025);
+  whistleGain.gain.exponentialRampToValueAtTime(.0001,start+.22);
+  whistle.connect(whistleGain);whistleGain.connect(ctx.destination);
+  whistle.start(start);whistle.stop(start+.23);
+
+  const burstAt=start+.20;
+  const noise=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),noiseGain=ctx.createGain();
+  noise.buffer=noiseBuffer;
+  filter.type='bandpass';
+  filter.frequency.setValueAtTime(1450-index*120,burstAt);
+  filter.frequency.exponentialRampToValueAtTime(520,burstAt+.34);
+  filter.Q.value=.72;
+  noiseGain.gain.setValueAtTime(.0001,burstAt);
+  noiseGain.gain.exponentialRampToValueAtTime(.42,burstAt+.012);
+  noiseGain.gain.exponentialRampToValueAtTime(.0001,burstAt+.39);
+  noise.connect(filter);filter.connect(noiseGain);noiseGain.connect(ctx.destination);
+  noise.start(burstAt);noise.stop(burstAt+.40);
+
+  const boom=ctx.createOscillator(),boomGain=ctx.createGain();
+  boom.type='sine';
+  boom.frequency.setValueAtTime(155-index*12,burstAt);
+  boom.frequency.exponentialRampToValueAtTime(48,burstAt+.24);
+  boomGain.gain.setValueAtTime(.0001,burstAt);
+  boomGain.gain.exponentialRampToValueAtTime(.24,burstAt+.014);
+  boomGain.gain.exponentialRampToValueAtTime(.0001,burstAt+.28);
+  boom.connect(boomGain);boomGain.connect(ctx.destination);
+  boom.start(burstAt);boom.stop(burstAt+.29);
+
+  for(let i=0;i<7;i++){
+   const delay=.055+i*.033+Math.random()*.035;
+   const sparkle=ctx.createOscillator(),sparkleGain=ctx.createGain();
+   sparkle.type='triangle';
+   sparkle.frequency.setValueAtTime(780+Math.random()*1050,burstAt+delay);
+   sparkleGain.gain.setValueAtTime(.0001,burstAt+delay);
+   sparkleGain.gain.exponentialRampToValueAtTime(.075,burstAt+delay+.008);
+   sparkleGain.gain.exponentialRampToValueAtTime(.0001,burstAt+delay+.095);
+   sparkle.connect(sparkleGain);sparkleGain.connect(ctx.destination);
+   sparkle.start(burstAt+delay);sparkle.stop(burstAt+delay+.10);
+  }
+ });
+}
+
+/* Fuegos artificiales: tres cohetes, estallidos graves y chispas agudas. */
+function showGoalFireworks(){
+ const host=$('goalFireworks');
+ if(!host)return;
+ if(goalFireworksTimer!==null){clearTimeout(goalFireworksTimer);goalFireworksTimer=null;}
+ host.innerHTML='';
+ host.style.left=GOAL[0]+'%';
+ host.style.top=GOAL[1]+'%';
+ const colors=['#ffe28a','#fff6d2','#f4b942','#e96b62','#6fd5e6','#9c8cff','#76d49a'];
+ const offsets=[[-2,0],[-20,-17],[19,-15]];
+ offsets.forEach(([dx,dy],burstIndex)=>{
+  const burst=document.createElement('span');
+  burst.className='firework-burst';
+  burst.style.setProperty('--burst-x',dx+'px');
+  burst.style.setProperty('--burst-y',dy+'px');
+  const delay=(burstIndex*.24).toFixed(2)+'s';
+  const core=document.createElement('span');
+  core.className='firework-core';
+  core.style.setProperty('--delay',delay);
+  burst.append(core);
+  for(let i=0;i<18;i++){
+   const spark=document.createElement('span');
+   spark.className='firework-spark';
+   spark.style.setProperty('--angle',(i*20+burstIndex*9)+'deg');
+   spark.style.setProperty('--distance',(34+Math.random()*22).toFixed(0)+'px');
+   spark.style.setProperty('--delay',(burstIndex*.24+Math.random()*.07).toFixed(2)+'s');
+   spark.style.setProperty('--spark-color',colors[Math.floor(Math.random()*colors.length)]);
+   burst.append(spark);
+  }
+  host.append(burst);
+ });
+ host.classList.remove('hidden');
+ host.setAttribute('aria-hidden','false');
+ playFireworksSound();
+ goalFireworksTimer=window.setTimeout(()=>{
+  host.classList.add('hidden');
+  host.setAttribute('aria-hidden','true');
+  host.innerHTML='';
+  goalFireworksTimer=null;
+ },1650);
+}
+/* Golpe mágico breve al capturar: caída tonal, impacto grave y destello. */
+function playCaptureSound(){
+ if(!effectsEnabled)return;
+ const ctx=getAudioContext();if(!ctx||!noiseBuffer)return;
+ const now=ctx.currentTime;
+ /* Impacto grave más fuerte, con un golpe de ruido para que destaque sobre la música. */
+ const impact=ctx.createOscillator(),impactGain=ctx.createGain();
+ impact.type='sine';
+ impact.frequency.setValueAtTime(210,now);
+ impact.frequency.exponentialRampToValueAtTime(48,now+.30);
+ impactGain.gain.setValueAtTime(.0001,now);
+ impactGain.gain.exponentialRampToValueAtTime(.72,now+.012);
+ impactGain.gain.exponentialRampToValueAtTime(.0001,now+.34);
+ impact.connect(impactGain);impactGain.connect(ctx.destination);
+ impact.start(now);impact.stop(now+.35);
+ const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),noiseGain=ctx.createGain();
+ source.buffer=noiseBuffer;filter.type='lowpass';filter.frequency.setValueAtTime(1250,now);filter.frequency.exponentialRampToValueAtTime(260,now+.22);
+ noiseGain.gain.setValueAtTime(.0001,now);
+ noiseGain.gain.exponentialRampToValueAtTime(.48,now+.008);
+ noiseGain.gain.exponentialRampToValueAtTime(.0001,now+.24);
+ source.connect(filter);filter.connect(noiseGain);noiseGain.connect(ctx.destination);
+ source.start(now);source.stop(now+.25);
+ const chime=ctx.createOscillator(),chimeGain=ctx.createGain();
+ chime.type='triangle';chime.frequency.setValueAtTime(740,now+.025);
+ chime.frequency.exponentialRampToValueAtTime(220,now+.28);
+ chimeGain.gain.setValueAtTime(.0001,now+.025);
+ chimeGain.gain.exponentialRampToValueAtTime(.24,now+.045);
+ chimeGain.gain.exponentialRampToValueAtTime(.0001,now+.32);
+ chime.connect(chimeGain);chimeGain.connect(ctx.destination);
+ chime.start(now+.025);chime.stop(now+.33);
+}
+
+/* Celebración de 4 segundos: el tablero sigue recibiendo acciones durante la animación. */
+function stopVictoryAudio(){
+ if(victoryCheerTimer!==null){clearTimeout(victoryCheerTimer);victoryCheerTimer=null;}
+ ['victoryTrumpets','victoryCrowd'].forEach(id=>{
+  const audio=$(id);if(!audio)return;
+  audio.pause();try{audio.currentTime=0;}catch(e){}
+ });
+}
+function playVictoryAudio(){
+ if(!effectsEnabled)return;
+ const trumpet=$('victoryTrumpets'),crowd=$('victoryCrowd');
+ if(!trumpet||!crowd)return;
+ stopVictoryAudio();
+ trumpet.volume=.88;crowd.volume=.68;
+ const fanfare=trumpet.play();
+ if(fanfare&&typeof fanfare.catch==='function')fanfare.catch(()=>{});
+ /* Los vítores entran un instante después de las trompetas para que se distingan. */
+ victoryCheerTimer=window.setTimeout(()=>{
+  victoryCheerTimer=null;
+  if(!victoryActive||!effectsEnabled)return;
+  try{crowd.currentTime=0;}catch(e){}
+  const cheer=crowd.play();
+  if(cheer&&typeof cheer.catch==='function')cheer.catch(()=>{});
+ },260);
+}
+function buildVictoryConfetti(){
+ const host=$('victoryConfetti');
+ if(!host)return;
+ const colors=['#f2d28b','#fff0c1','#c84a50','#32815c','#e0b83c','#427cbd','#d8b76d'];
+ host.innerHTML=Array.from({length:52},()=>{
+  const left=(Math.random()*100).toFixed(2);
+  const delay=(Math.random()*.45).toFixed(2);
+  const duration=(2.9+Math.random()*.35).toFixed(2);
+  const drift=Math.round((Math.random()-.5)*220);
+  const spin=Math.round(360+Math.random()*900);
+  const color=colors[Math.floor(Math.random()*colors.length)];
+  const width=Math.round(5+Math.random()*5),height=Math.round(9+Math.random()*9);
+  return '<i class="victory-confetti-piece" style="left:'+left+'%;--delay:'+delay+'s;--duration:'+duration+'s;--drift:'+drift+'px;--spin:'+spin+'deg;background:'+color+';width:'+width+'px;height:'+height+'px"></i>';
+ }).join('');
+}
+function showNextVictoryCelebration(){
+ if(victoryActive||!victoryQueue.length)return;
+ const winner=victoryQueue.shift();
+ const overlay=$('victoryOverlay');
+ if(!overlay)return;
+ const kingdom=REALM_NAMES[winner.team]||'Reino';
+ const team=T[winner.team]||{};
+ victoryActive=true;
+ overlay.style.setProperty('--winner-color',team.color||'#d8b76d');
+ $('victoryCrest').textContent=team.icon||'🏆';
+ $('victoryKingdom').textContent=kingdom.toUpperCase();
+ $('victoryPlayer').textContent=winner.playerName;
+ buildVictoryConfetti();
+ overlay.classList.remove('hidden');
+ overlay.setAttribute('aria-hidden','false');
+ playVictoryAudio();
+ victoryTimer=window.setTimeout(()=>{
+  overlay.classList.add('hidden');
+  overlay.setAttribute('aria-hidden','true');
+  victoryActive=false;
+  victoryTimer=null;
+  if(winner.finishAfter){
+   const lastPlayer=players.find(pl=>!pl.finished);
+   if(lastPlayer&&!finishOrder.includes(lastPlayer.team))finishOrder.push(lastPlayer.team);
+   over=true;
+   msg('Partida terminada. ¡Gracias por jugar Ludo de Gongonia!');
+   render();
+   showFinalStats(finishOrder[0]||winner.team);
+   return;
+  }
+  showNextVictoryCelebration();
+ },4000);
+}
+function enqueueVictoryCelebration(player,finishAfter=false){
+ if(!player||!player.team)return;
+ victoryQueue.push({team:player.team,playerName:player.playerName||'Jugador',finishAfter});
+ showNextVictoryCelebration();
+}
+function resetVictoryCelebration(){
+ if(victoryTimer!==null){clearTimeout(victoryTimer);victoryTimer=null;}
+ victoryQueue=[];
+ victoryActive=false;
+ stopVictoryAudio();
+ const overlay=$('victoryOverlay');
+ if(overlay){overlay.classList.add('hidden');overlay.setAttribute('aria-hidden','true');}
+}
+
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function chosen(){return [...document.querySelectorAll('.choice input[type="checkbox"]:checked')].map(x=>x.value)}
+function getPlayerMode(team){const select=document.querySelector('.player-mode[data-team="'+team+'"]');return select?select.value:'human'}
+function getPlayerName(team){const input=document.querySelector('.player-name[data-team="'+team+'"]');const mode=getPlayerMode(team);return input&&input.value.trim()?input.value.trim():(mode==='strategic'?'Bot estratégico '+T[team].name:mode==='bot'?'Bot '+T[team].name:'Jugador '+T[team].name)}
+function escapeHTML(value){return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+function msg(s){$('status').textContent=s}
+function setMode(team,mode){
+ const checkbox=document.querySelector('.realm-check[value="'+team+'"]');
+ const select=document.querySelector('.player-mode[data-team="'+team+'"]');
+ const group=document.querySelector('.setup-mode-group[data-team="'+team+'"]');
+ if(select)select.value=mode;
+ if(checkbox)checkbox.checked=mode!=='empty';
+ if(group)group.querySelectorAll('.setup-mode-hit').forEach(label=>{
+  const radio=label.querySelector('input');
+  const selected=!!(radio&&radio.value===mode);
+  if(radio)radio.checked=selected;
+  label.classList.toggle('selected',selected);
+ });
+}
+function count(){
+ const n=chosen().length;
+ $('count').textContent=n+' reinos participantes · mínimo 2';
+ $('start').disabled=n<2;
+ document.querySelectorAll('.realm-hit').forEach(label=>{
+  const input=document.getElementById(label.htmlFor);
+  label.classList.toggle('selected',!!(input&&input.checked));
+ });
+ document.querySelectorAll('.setup-mode-group').forEach(group=>{
+  const team=group.dataset.team;
+  const checkbox=document.querySelector('.realm-check[value="'+team+'"]');
+  const select=document.querySelector('.player-mode[data-team="'+team+'"]');
+  const mode=checkbox&&checkbox.checked?(select?select.value:'human'):'empty';
+  group.classList.toggle('inactive',mode==='empty');
+  group.querySelectorAll('.setup-mode-hit').forEach(label=>{
+   const radio=label.querySelector('input');
+   const selected=!!(radio&&radio.value===mode);
+   if(radio)radio.checked=selected;
+   label.classList.toggle('selected',selected);
+  });
+ });
+ document.querySelectorAll('.setup-native-player').forEach(group=>{
+  const input=group.querySelector('.realm-check');
+  group.classList.toggle('inactive',!(input&&input.checked));
+ });
+}
+function botModeLabel(pl){return pl.botMode==='strategic'?'Bot estratégico':'Bot básico'}
+function chooseStrategicBotMove(pl,options){
+ const ranked=options.map(p=>{
+  let score=Math.random()*0.4;
+  if(p.progress<0){
+   /* Sacar una ficha nueva suele ser mejor que dejarla esperando en la base. */
+   score+=380;
+   if(!pl.pieces.some(other=>other.progress>=0))score+=35;
+  }else{
+   const target=p.progress+roll;
+   if(target===56){
+    /* Completar una ficha es la prioridad más alta. */
+    score+=2000;
+   }else{
+    /* Si no puede terminar, prefiere avanzar, especialmente cerca de la meta. */
+    score+=target*1.5;
+    if(target>=51&&target<=55)score+=20;
+    if(target<=50){
+     const landing=(T[pl.team].start+target)%52;
+     if(SAFE.has(landing)){
+      score+=25;
+     }else{
+      let captures=0;
+      players.filter(other=>other!==pl).forEach(op=>op.pieces.forEach(e=>{
+       if(e.progress>=0&&e.progress<=50&&(T[op.team].start+e.progress)%52===landing)captures++;
+      }));
+      if(captures>0)score+=1000+captures*30;
+     }
+    }
+   }
+  }
+  return {piece:p,score};
+ });
+ const bestScore=Math.max(...ranked.map(item=>item.score));
+ const best=ranked.filter(item=>bestScore-item.score<0.75);
+ return best[Math.floor(Math.random()*best.length)].piece;
+}
+function scheduleBotTurn(delay=650){
+ if(botTimer!==null){clearTimeout(botTimer);botTimer=null;}
+ if(over||!players[current]||!players[current].isBot)return;
+ botTimer=setTimeout(()=>{
+  botTimer=null;
+  if(over||!players[current]||!players[current].isBot||animating)return;
+  if(waiting&&roll!==null){
+   const pl=players[current];
+   const options=pl.pieces.filter(p=>legal(p));
+   if(options.length){
+    const pick=pl.botMode==='strategic'?chooseStrategicBotMove(pl,options):options[Math.floor(Math.random()*options.length)];
+    move(pl,pick);
+   }
+  }else if(!waiting){$('roll').click();}
+ },delay);
+}
+document.querySelectorAll('.realm-check').forEach(input=>input.addEventListener('change',()=>{
+ const team=input.value;
+ const select=document.querySelector('.player-mode[data-team="'+team+'"]');
+ if(input.checked){if(select&&select.value==='empty')setMode(team,'human');}
+ else setMode(team,'empty');
+ count();
+}));
+document.querySelectorAll('.player-mode').forEach(select=>select.addEventListener('change',()=>{
+ setMode(select.dataset.team,select.value);
+ count();
+}));
+document.querySelectorAll('.setup-mode-group').forEach(group=>{
+ const team=group.dataset.team;
+ const checkbox=document.querySelector('.realm-check[value="'+team+'"]');
+ const nativeSelect=document.querySelector('.player-mode[data-team="'+team+'"]');
+ const mode=checkbox&&checkbox.checked?(nativeSelect?nativeSelect.value:'human'):'empty';
+ setMode(team,mode==='empty'?'empty':mode);
+ group.querySelectorAll('input[type="radio"]').forEach(radio=>radio.addEventListener('change',()=>{
+  if(radio.checked){setMode(team,radio.value);count();}
+ }));
+});
+count();
+
+const REALM_NAMES={red:'Gongonia',blue:'Kelta',green:'Brunia',yellow:'Routa'};
+/* Un solo generador para ambos dados: caras vecinas válidas y puntos proyectados con la geometría del cubo. */
+function renderProjectedDie(value,groupId,rubyId){
+ const group=$(groupId);
+ if(!group)return;
+ const number=Number(value);
+ if(!Number.isInteger(number)||number<1||number>6){group.innerHTML='';return;}
+ const patterns={
+  1:[[.5,.5]],
+  2:[[.3,.3],[.7,.7]],
+  3:[[.3,.3],[.5,.5],[.7,.7]],
+  4:[[.3,.3],[.7,.3],[.3,.7],[.7,.7]],
+  5:[[.3,.3],[.7,.3],[.5,.5],[.3,.7],[.7,.7]],
+  6:[[.3,.22],[.7,.22],[.3,.5],[.7,.5],[.3,.78],[.7,.78]]
+ };
+ const directions={px:[1,0,0],nx:[-1,0,0],py:[0,1,0],ny:[0,-1,0],pz:[0,0,1],nz:[0,0,-1]};
+ const faceValues={px:3,nx:4,py:1,ny:6,pz:2,nz:5};
+ const keyForValue=Object.keys(faceValues).find(key=>faceValues[key]===number);
+ const topDir=directions[keyForValue];
+ const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+ const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+ const keyForDirection=vector=>Object.keys(directions).find(key=>directions[key].every((v,i)=>v===vector[i]));
+ const sideOptions=Object.keys(directions).filter(key=>dot(directions[key],topDir)===0);
+ const rightKey=sideOptions[Math.floor(Math.random()*sideOptions.length)];
+ const leftKey=keyForDirection(cross(directions[rightKey],topDir));
+ const faces=[
+  {name:'top',value:number,matrix:'matrix(39 17.8 -39 17.8 50 7.1)'},
+  {name:'left',value:faceValues[leftKey],matrix:'matrix(39 22 0 42 8 28)'},
+  {name:'right',value:faceValues[rightKey],matrix:'matrix(-39 22 0 42 92 28)'}
+ ];
+ const pipRadius=.105;
+ group.innerHTML=faces.map(face=>{
+  const pips=patterns[face.value].map(([u,v])=>
+   '<g><ellipse cx="'+u+'" cy="'+v+'" rx="'+(pipRadius+.012)+'" ry="'+(pipRadius+.012)+'" fill="#4c1018" opacity=".88"/><ellipse cx="'+u+'" cy="'+v+'" rx="'+pipRadius+'" ry="'+pipRadius+'" fill="url(#'+rubyId+')" stroke="#5c0c15" stroke-width=".012"/><path d="M '+(u-pipRadius*.46)+' '+(v-pipRadius*.28)+' Q '+u+' '+(v-pipRadius*.55)+' '+(u+pipRadius*.28)+' '+(v-pipRadius*.3)+'" fill="none" stroke="#e7a2a0" stroke-width=".009" stroke-linecap="round" opacity=".58"/></g>'
+  ).join('');
+  return '<g class="die-face-pips die-face-'+face.name+'" transform="'+face.matrix+'">'+pips+'</g>';
+ }).join('');
+}
+function updateDieFace(value){
+ renderProjectedDie(value,'die-pip-group','game-die-ruby');
+ const result=$('die-result');
+ if(result)result.textContent=String(value);
+}
+function updateDrawDieFace(value){
+ renderProjectedDie(value,'draw-die-pip-group','draw-die-ruby');
+ $('drawDie').setAttribute('aria-label','Dado: '+value);
+}
+function beginDraw(){
+ const teams=ORDER.filter(team=>chosen().includes(team));
+ if(teams.length<2){count();return;}
+ drawState={
+  round:1,roundTeams:[...teams],index:0,history:[],results:{},winner:null,busy:false,notice:'',
+  participants:teams.map(team=>({team,name:getPlayerName(team),mode:getPlayerMode(team)}))
+ };
+ $('setup').classList.remove('hidden');
+ $('drawScreen').classList.remove('hidden');
+ $('drawDie').classList.remove('rolling');
+ updateDrawDieFace(1);
+ renderDraw();
+ window.scrollTo(0,0);
+}
+function renderDraw(){
+ if(!drawState)return;
+ const state=drawState;
+ const tiedNames=state.roundTeams.map(team=>REALM_NAMES[team]).join(', ');
+ $('drawRoundTitle').textContent=state.round===1
+  ?'Todos los reinos participantes lanzan un dado. El resultado más alto comienza.'
+  :'Hay empate en el valor más alto. Repiten únicamente: '+tiedNames+'.';
+ const historyRounds=[...new Set(state.history.map(item=>item.round))];
+ $('drawResults').innerHTML=historyRounds.map(round=>{
+  const entries=state.history.filter(item=>item.round===round);
+  const top=Math.max(...entries.map(item=>item.value));
+  return '<div class="draw-result-round"><strong>'+(round===1?'Primera ronda':'Desempate '+(round-1))+'</strong>'+
+   entries.map(item=>'<div class="draw-result-row"><span>'+T[item.team].icon+' '+escapeHTML(item.name)+' · '+REALM_NAMES[item.team]+'</span><span class="draw-result-score '+(item.value===top?'high':'')+'">'+item.value+'</span></div>').join('')+
+   '</div>';
+ }).join('');
+ if(state.winner){
+  const winner=state.participants.find(p=>p.team===state.winner);
+  $('drawCurrent').innerHTML='<strong>🏆 '+REALM_NAMES[state.winner]+'</strong><span>'+escapeHTML(winner.name)+' obtiene el primer turno.</span>';
+  $('drawInstruction').textContent='¡Sorteo terminado! El orden normal continuará después del primer turno.';
+  $('drawRoll').classList.add('hidden');
+  $('drawContinue').classList.remove('hidden');
+  $('drawContinue').disabled=false;
+  $('drawContinue').textContent='COMENZAR PARTIDA';
+  return;
+ }
+ const team=state.roundTeams[state.index];
+ const player=state.participants.find(p=>p.team===team);
+ $('drawCurrent').innerHTML='<strong>'+T[team].icon+' '+REALM_NAMES[team]+'</strong><span>Turno de lanzamiento: '+escapeHTML(player.name)+' · '+(player.mode==='human'?'Persona':player.mode==='bot'?'Bot básico':'Bot avanzado')+'</span>';
+ $('drawInstruction').textContent=state.notice||'Pulsa «Lanzar dado» para obtener el resultado de este reino.';
+ $('drawRoll').classList.remove('hidden');
+ $('drawRoll').disabled=state.busy;
+ $('drawRoll').textContent='LANZAR DADO';
+ $('drawContinue').classList.add('hidden');
+}
+async function rollDrawDie(){
+ const state=drawState;
+ if(!state||state.busy||state.winner)return;
+ const team=state.roundTeams[state.index];
+ if(!team)return;
+ state.busy=true;$('drawRoll').disabled=true;
+ $('drawInstruction').textContent='El dado está girando...';
+ $('drawDie').classList.add('rolling');
+ playDiceSound();
+ const timer=setInterval(()=>{
+  const face=1+Math.floor(Math.random()*6);
+  updateDrawDieFace(face);
+ },65);
+ await pause(760);
+ clearInterval(timer);
+ const value=1+Math.floor(Math.random()*6);
+ $('drawDie').classList.remove('rolling');
+ updateDrawDieFace(value);
+ const participant=state.participants.find(p=>p.team===team);
+ state.history.push({round:state.round,team,name:participant.name,value});
+ state.results[team]=value;
+ state.index++;
+ await pause(420);
+ if(state.index>=state.roundTeams.length){
+  const highest=Math.max(...Object.values(state.results));
+  const leaders=state.roundTeams.filter(candidate=>state.results[candidate]===highest);
+  if(leaders.length===1){
+   state.winner=leaders[0];
+   state.notice='El resultado más alto fue '+highest+'.';
+  }else{
+   state.round++;
+   state.roundTeams=leaders;
+   state.index=0;
+   state.results={};
+   state.notice='Empate con '+highest+'. Solo los reinos empatados vuelven a lanzar.';
+  }
+ }
+ state.busy=false;
+ renderDraw();
+}
+$('drawRoll').addEventListener('click',rollDrawDie);
+$('drawContinue').addEventListener('click',()=>{
+ if(drawState&&drawState.winner)start(drawState.winner);
+});
+$('drawBack').addEventListener('click',()=>{
+ drawState=null;
+ $('drawScreen').classList.add('hidden');
+ $('setup').classList.remove('hidden');
+ window.scrollTo(0,0);
+});
+
+function start(firstTeam=null){resetVictoryCelebration();let teams=ORDER.filter(x=>chosen().includes(x));if(teams.length<2)return;players=teams.map(team=>({team,playerName:getPlayerName(team),botMode:getPlayerMode(team),isBot:getPlayerMode(team)!=='human',finished:false,pieces:[0,1,2,3].map(slot=>({id:++idseq,slot,progress:-1}))}));current=firstTeam?players.findIndex(p=>p.team===firstTeam):0;if(current<0)current=0;lastStartingTeam=players[current]?players[current].team:null;drawState=null;$('drawScreen').classList.add('hidden');roll=null;waiting=false;over=false;animating=false;animatingPieceId=null;gameStartedAt=Date.now();matchStatsRecorded=false;gameStats={};finishOrder=[];teams.forEach(team=>gameStats[team]={rolls:0,moves:0,captures:{red:0,green:0,yellow:0,blue:0}});$('results').classList.add('hidden');$('setup').classList.add('hidden');$('game').classList.remove('hidden');playMusicFor('game');msg('Turno de '+players[current].playerName+' — Reino '+T[players[current].team].name+'. Lanza el dado; necesitas un 6 para sacar una ficha.');render();playTurnSound();scheduleBotTurn()}
+$('start').addEventListener('click',beginDraw);$('back').addEventListener('click',()=>{$('game').classList.add('hidden');$('setup').classList.remove('hidden');playMusicFor('setup')});$('restart').addEventListener('click',()=>{if(confirm('¿Reiniciar partida?'))start(lastStartingTeam)});$('newGame').addEventListener('click',()=>{$('results').classList.add('hidden');$('setup').classList.remove('hidden');beginDraw()});$('resultMenu').addEventListener('click',()=>{$('results').classList.add('hidden');$('game').classList.add('hidden');$('setup').classList.add('hidden');$('homeScreen').classList.remove('hidden');playMusicFor('setup')});
+function position(team,p){
+ if(p.progress<0)return HOME_POINTS[team][p.slot];
+ /* Las 52 casillas comunes terminan justo antes del pasillo final propio. */
+ if(p.progress<=50)return ROUTE[(T[team].start+p.progress)%52];
+ if(p.progress<=55)return LANES[team][p.progress-51];
+ return GOAL;
+}
+function positionKey(team,p){
+ if(p.progress<0)return 'base-'+team+'-'+p.slot;
+ if(p.progress<=50)return 'route-'+((T[team].start+p.progress)%52);
+ if(p.progress<=55)return 'lane-'+team+'-'+(p.progress-51);
+ return 'goal';
+}
+/* En Gongonia se puede sacar ficha con 1 o 6; ambas tiradas dan turno adicional. */
+function legal(p){return roll!==null&&(p.progress<0?(roll===1||roll===6):(p.progress<56&&p.progress+roll<=56))}
+function render(){
+ const board=$('board');
+ board.querySelectorAll('.token-stack').forEach(node=>node.remove());
+ let boardArt=board.querySelector('.board-art');
+ if(!boardArt){
+  boardArt=document.createElement('img');
+  boardArt.className='board-art';
+  boardArt.src='tablero-gongonia.PNG?v=0.10.6';
+  boardArt.alt='Tablero de Ludo de Gongonia';
+  boardArt.draggable=false;
+  board.insertBefore(boardArt,board.firstChild);
+ }
+ const groups=new Map();
+ players.forEach(pl=>pl.pieces.forEach(p=>{
+   const key=positionKey(pl.team,p);
+   if(!groups.has(key))groups.set(key,{point:position(pl.team,p),items:[]});
+   groups.get(key).items.push({pl,p});
+ }));
+ groups.forEach(({point,items})=>{
+   const stack=document.createElement('div');
+   const n=items.length;
+   stack.className='token-stack '+(n===1?'single':'multi')+' count-'+n+(n>=5?' many':'');
+   if(items.some(item=>item.p.id===animatingPieceId))stack.classList.add('hopping');
+   if(items.some(item=>capturedPieceIds.has(item.p.id)))stack.classList.add('captured-return');
+   stack.style.left=point[0]+'%';stack.style.top=point[1]+'%';
+   stack.setAttribute('aria-label',n+' ficha(s) en esta casilla');
+   items.forEach(({pl,p})=>{
+     const b=document.createElement('button');
+     b.className='piece '+pl.team+(waiting&&pl===players[current]&&legal(p)?' legal':'')+(p.id===stompingPieceId?' stomping':'')+(stompedPieceIds.has(p.id)?' stomped':'');
+     b.style.setProperty('--team',T[pl.team].color);
+     const img=document.createElement('img');
+     img.className='guardian-token';
+     img.src=TOKEN_IMAGES[pl.team];
+     img.alt='';
+     img.draggable=false;
+     b.append(img);
+     const badge=document.createElement('span');
+     badge.className='piece-number';
+     badge.textContent=p.slot+1;
+     b.append(badge);
+     b.setAttribute('aria-label','Reino '+T[pl.team].name+', ficha '+(p.slot+1));
+     b.disabled=pl!==players[current]||!waiting||!legal(p);
+     b.onclick=()=>move(pl,p);
+     stack.append(b);
+   });
+   board.append(stack);
+ });
+ $('turn').textContent=T[players[current].team].icon+' Reino '+T[players[current].team].name+' de '+players[current].playerName+(players[current].isBot?' · '+botModeLabel(players[current]):'');
+ const rollDisabled=waiting||over||animating;
+ $('roll').disabled=rollDisabled;
+ $('roll').textContent=waiting?'Elige ficha':'🎲 Lanzar dado';
+ $('die').setAttribute('aria-disabled',String(rollDisabled));
+ $('die').setAttribute('aria-label',rollDisabled?'Dado bloqueado mientras eliges una ficha':'Toca el dado para lanzarlo');
+ $('players').innerHTML=players.map((p,i)=>'<div class="player '+(i===current&&!over?'current':'')+'"><span class="dot" style="background:'+T[p.team].color+'"></span><b>'+escapeHTML(p.playerName)+(p.isBot?' · '+botModeLabel(p):'')+' — Reino '+T[p.team].name+'</b><span class="right">'+p.pieces.filter(x=>x.progress===56).length+'/4 en meta</span></div>').join('');
+}
+function showFinalStats(winnerTeam){
+ /* Al terminar la partida no se encolan más celebraciones individuales. */
+ victoryQueue=[];
+ const seconds=Math.max(0,Math.floor((Date.now()-gameStartedAt)/1000));
+ saveCompletedMatch(winnerTeam,seconds);
+ const mm=String(Math.floor(seconds/60)).padStart(2,'0'),ss=String(seconds%60).padStart(2,'0');
+ const winner=players.find(pl=>pl.team===winnerTeam);$('resultWinner').textContent='¡Victoria de '+winner.playerName+' — Reino '+T[winnerTeam].name+' '+T[winnerTeam].icon+'!';
+ $('resultDuration').textContent='Duración total: '+mm+':'+ss;
+ const teamNames={red:'Rojo',green:'Verde',yellow:'Amarillo',blue:'Azul'};
+ const orderedPlayers=[...finishOrder.map(team=>players.find(pl=>pl.team===team)).filter(Boolean),...players.filter(pl=>!finishOrder.includes(pl.team))];
+ const rows=orderedPlayers.map(pl=>{
+  const s=gameStats[pl.team];
+  const total=Object.values(s.captures).reduce((a,b)=>a+b,0);
+  const details=players.filter(other=>other.team!==pl.team).map(other=>{
+   const n=s.captures[other.team];
+   return '<span class="stat-chip">'+T[other.team].icon+' A '+escapeHTML(other.playerName)+' (Reino '+teamNames[other.team]+'): <b>'+n+'</b></span>';
+  }).join('');
+  const arrivalIndex=finishOrder.indexOf(pl.team);
+  const arrivalLabel=arrivalIndex===0?'1.º lugar':arrivalIndex===1?'2.º lugar':arrivalIndex===2?'3.º lugar':arrivalIndex===3?'4.º lugar':'No completó';
+  return '<tr><td><b>'+T[pl.team].icon+' '+escapeHTML(pl.playerName)+' — Reino '+teamNames[pl.team]+'</b>'+(pl.team===winnerTeam?' <span style="color:#f4d99b">🏆 Ganador</span>':'')+'</td><td>'+arrivalLabel+'</td><td>'+s.rolls+'</td><td>'+s.moves+'</td><td><b>'+total+'</b><div class="stat-captures">'+details+'</div></td></tr>';
+ }).join('');
+ $('resultStats').innerHTML='<table class="stats-table"><thead><tr><th>Jugador</th><th>Llegada</th><th>Tiradas</th><th>Movimientos</th><th>Capturas realizadas y reino capturado</th></tr></thead><tbody>'+rows+'</tbody></table><p class="note">El puesto depende del orden real en que cada reino completó sus cuatro fichas. “No completó” significa que la partida terminó antes de que ese reino llegara a la meta. Las capturas se muestran por reino rival.</p>';
+ $('game').classList.add('hidden');$('results').classList.remove('hidden');
+}
+function next(){let old=current;do{current=(current+1)%players.length}while(players[current].finished&&current!==old);roll=null;waiting=false;render();msg('Turno de '+players[current].playerName+(players[current].isBot?' · '+botModeLabel(players[current]):'')+' — Reino '+T[players[current].team].name+'. Lanza el dado.');if(current!==old)playTurnSound();scheduleBotTurn()}
+$('roll').onclick=async()=>{
+ if(waiting||over||animating)return;
+ animating=true;
+ $('roll').disabled=true;
+ const faces=[1,2,3,4,5,6];
+ gameStats[players[current].team].rolls++;
+ const finalRoll=1+Math.floor(Math.random()*6);
+ playDiceSound();
+ let faceIndex=0;
+ $('die').classList.add('rolling');
+ $('die-result').textContent='1';updateDieFace(1);
+ const faceTimer=setInterval(()=>{const face=faces[faceIndex++%faces.length];$('die-result').textContent=face;updateDieFace(face)},75);
+ await pause(650);
+ clearInterval(faceTimer);
+ roll=finalRoll;
+ $('die').classList.remove('rolling');
+ $('die-result').textContent=roll;updateDieFace(roll); $('die').setAttribute('aria-label','Resultado del dado: '+roll);
+ animating=false;
+ if(!players[current].pieces.some(legal)){
+  let extra=roll===1||roll===6;
+  waiting=false;render();
+  if(extra){msg('Salió '+roll+'. No puedes mover; tienes otra tirada.');scheduleBotTurn(650);}
+  else{msg(players[current].playerName+' no tiene movimiento posible. Termina su turno.');setTimeout(next,600)}
+  return;
+ }
+ waiting=true;render();msg('Salió '+roll+'. Toca una ficha resaltada para moverla.');scheduleBotTurn(750);
+};
+$('die').addEventListener('click',()=>{
+ if(!$('roll').disabled)$('roll').click();
+});
+$('die').addEventListener('keydown',event=>{
+ if((event.key==='Enter'||event.key===' ')&&!$('roll').disabled){
+  event.preventDefault();
+  $('roll').click();
+ }
+});
+async function move(pl,p){
+ if(!waiting||pl!==players[current]||!legal(p))return;
+ const n=roll;
+ const oldProgress=p.progress;
+ const targetProgress=oldProgress<0?0:oldProgress+n;
+ const reachedGoal=oldProgress<56&&targetProgress===56;
+ gameStats[pl.team].moves++;
+ if(oldProgress<0)playPieceCheer();
+ waiting=false;roll=null;animating=true;animatingPieceId=p.id;
+ const steps=[];
+ if(oldProgress<0)steps.push(0);
+ else for(let step=oldProgress+1;step<=targetProgress;step++)steps.push(step);
+ for(const step of steps){
+  p.progress=step;
+  playFootstep();
+  render();
+  await pause(165);
+ }
+ animatingPieceId=null;animating=false;
+ let capturedCount=0;
+ const capturedByTeam={};
+ const capturedPieces=[];
+ /* Las fichas rivales permanecen en la casilla mientras ocurre el pisotón. */
+ if(p.progress<=50){
+   const landing=(T[pl.team].start+p.progress)%52;
+   if(!SAFE.has(landing)){
+     players.filter(x=>x!==pl).forEach(op=>op.pieces.forEach(e=>{
+       if(e.progress>=0&&e.progress<=50&&(T[op.team].start+e.progress)%52===landing){
+         capturedCount++;capturedPieces.push(e);gameStats[pl.team].captures[op.team]++;capturedByTeam[op.team]=(capturedByTeam[op.team]||0)+1;
+       }
+     }));
+   }
+ }
+ if(capturedCount>0){
+   stompingPieceId=p.id;
+   capturedPieces.forEach(e=>stompedPieceIds.add(e.id));
+   playCaptureSound();
+   render();
+   await pause(760);
+   capturedPieces.forEach(e=>{e.progress=-1;capturedPieceIds.add(e.id);});
+   stompingPieceId=null;
+   stompedPieceIds.clear();
+   render();
+   await pause(520);
+   capturedPieceIds.clear();
+   render();
+ }else{
+   render();
+ }
+ if(reachedGoal)showGoalFireworks();
+ if(pl.pieces.every(x=>x.progress===56)){
+   pl.finished=true;
+   if(!finishOrder.includes(pl.team))finishOrder.push(pl.team);
+   const finishAfter=players.filter(x=>!x.finished).length<=1;
+   next();msg('¡'+pl.playerName+' — Reino '+T[pl.team].name+' completó sus fichas! Puesto de llegada: '+finishOrder.length+'.');render();enqueueVictoryCelebration(pl,finishAfter);return;
+ }
+ /* Sacar 1/6, capturar o llegar a la meta concede una tirada adicional.
+    Si ocurren varias cosas en el mismo movimiento, la tirada extra no se acumula. */
+ if(n===1||n===6||capturedCount>0||reachedGoal){
+   roll=null;render();
+   const notices=[];
+   if(capturedCount>0){Object.keys(capturedByTeam).forEach(team=>{const target=players.find(other=>other.team===team);const nCaptured=capturedByTeam[team];notices.push('¡'+pl.playerName+' (Reino '+T[pl.team].name+') capturó '+nCaptured+' '+(nCaptured===1?'ficha':'fichas')+' de '+target.playerName+' (Reino '+T[team].name+'); regresan a su base.');});}
+   const reasons=[];
+   if(n===1||n===6)reasons.push('sacó '+n);
+   if(capturedCount>0)reasons.push('capturó una ficha');
+   if(reachedGoal)reasons.push('llegó con una ficha a la meta');
+   notices.push(pl.playerName+' — Reino '+T[pl.team].name+' obtiene otra tirada porque '+reasons.join(' y ')+'.');
+   msg(notices.join(' '));scheduleBotTurn(650);return;
+ }
+ next();
+}
+})();
+</script></body></html>
