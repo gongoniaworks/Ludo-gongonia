@@ -27,3 +27,7 @@ Este repositorio contiene la **línea de desarrollo nueva** de Ludo de Gongonia.
 - Ejecutar pruebas de regresión para vertical y horizontal.
 - No declarar estable ninguna versión sin pruebas suficientes y aprobación del usuario.
 - Mantener por separado el despliegue de pruebas respecto del juego histórico.
+
+## Publicación
+
+Cloudflare Pages: `ludo-gongonia.pages.dev`, conectado a la rama `main` del repositorio nuevo. La conexión histórica `ludo-gongonia-preview` permanece separada.
